@@ -1,5 +1,5 @@
 name: mad
-description: "A new Flutter project."
+description: "SnapShelf photo storage and album organizer."
 # The following line prevents the package from being accidentally published to
 # pub.dev using `flutter pub publish`. This is preferred for private packages.
 publish_to: 'none' # Remove this line if you wish to publish to pub.dev
@@ -73,6 +73,24 @@ flutter:
   # included with your application, so that you can use the icons in
   # the material Icons class.
   uses-material-design: true
+
+  assets:
+    - assets/images/
+    - assets/icons/
+    - assets/photos/
+
+flutter_launcher_icons:
+  android: true
+  ios: true
+  image_path: "assets/images/snapshelf_logo.png"
+  adaptive_icon_background: "#FFFFFF"
+  adaptive_icon_foreground: "assets/images/snapshelf_logo.png"
+  remove_alpha_ios: true
+  web:
+    generate: true
+    image_path: "assets/images/snapshelf_logo.png"
+    background_color: "#FFFFFF"
+    theme_color: "#6C63FF"
 
   # To add assets to your application, add an assets section, like this:
   # assets:
