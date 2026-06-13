@@ -1,25 +1,20 @@
 import 'package:flutter/material.dart';
 
 Future<bool?> showLogoutDialog(
-  BuildContext context, {
-  VoidCallback? onLogout,
-}) {
+  BuildContext context,
+) {
   return showDialog<bool>(
     context: context,
     barrierDismissible: true,
-    builder: (_) => LogoutDialog(onLogout: onLogout),
+    useRootNavigator: true,
+    builder: (_) => const LogoutDialog(),
   );
 }
 
 class LogoutDialog extends StatelessWidget {
   const LogoutDialog({
     super.key,
-    this.onCancel,
-    this.onLogout,
   });
-
-  final VoidCallback? onCancel;
-  final VoidCallback? onLogout;
 
   static const Color _primary = Color(0xFF8179DC);
   static const Color _text = Color(0xFF191922);
@@ -78,10 +73,7 @@ class LogoutDialog extends StatelessWidget {
                     child: SizedBox(
                       height: 44,
                       child: OutlinedButton(
-                        onPressed: () {
-                          Navigator.of(context).pop(false);
-                          onCancel?.call();
-                        },
+                        onPressed: () => Navigator.of(context).pop(false),
                         style: OutlinedButton.styleFrom(
                           foregroundColor: _muted,
                           side: const BorderSide(color: Color(0xFFD0D5DD)),
@@ -101,10 +93,7 @@ class LogoutDialog extends StatelessWidget {
                     child: SizedBox(
                       height: 44,
                       child: ElevatedButton(
-                        onPressed: () {
-                          Navigator.of(context).pop(true);
-                          onLogout?.call();
-                        },
+                        onPressed: () => Navigator.of(context).pop(true),
                         style: ElevatedButton.styleFrom(
                           elevation: 0,
                           backgroundColor: _primary,

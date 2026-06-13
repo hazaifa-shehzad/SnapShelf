@@ -1,5 +1,6 @@
 import 'package:flutter/material.dart';
 
+import '../../../core/widgets/app_photo_image.dart';
 import 'photo_image_data.dart';
 
 class PhotoGridCard extends StatelessWidget {
@@ -95,14 +96,12 @@ class _NetworkPhoto extends StatelessWidget {
 
   @override
   Widget build(BuildContext context) {
-    return Image.network(
-      imageUrl,
+    return AppPhotoImage(
+      imageUrl: imageUrl,
       width: double.infinity,
       height: double.infinity,
       fit: BoxFit.cover,
-      loadingBuilder: (context, child, progress) {
-        if (progress == null) return child;
-
+      loadingBuilder: (_) {
         return Container(
           color: const Color(0xFFF2F4F7),
           alignment: Alignment.center,
@@ -113,7 +112,7 @@ class _NetworkPhoto extends StatelessWidget {
           ),
         );
       },
-      errorBuilder: (context, error, stackTrace) {
+      errorBuilder: (_) {
         return Container(
           color: const Color(0xFFF2F4F7),
           alignment: Alignment.center,

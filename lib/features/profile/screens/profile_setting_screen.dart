@@ -1,17 +1,13 @@
 import 'package:flutter/material.dart';
+import 'package:provider/provider.dart';
 
+import '../../../core/widgets/app_photo_image.dart';
+import '../../../providers/auth_provider.dart';
 import 'change_password_screen.dart';
 
 class ProfileSettingScreen extends StatefulWidget {
-  const ProfileSettingScreen({
-    super.key,
-    this.initialEmail = '123@gmail',
-    this.avatarAssetPath,
-    this.onEmailSaved,
-  });
+  const ProfileSettingScreen({super.key, this.onEmailSaved});
 
-  final String initialEmail;
-  final String? avatarAssetPath;
   final ValueChanged<String>? onEmailSaved;
 
   @override
@@ -21,16 +17,16 @@ class ProfileSettingScreen extends StatefulWidget {
 class _ProfileSettingScreenState extends State<ProfileSettingScreen> {
   late final TextEditingController _emailController;
   final GlobalKey<FormState> _formKey = GlobalKey<FormState>();
+  bool _loadedUserEmail = false;
 
   static const Color _primary = Color(0xFF8179DC);
   static const Color _text = Color(0xFF15151D);
-  static const Color _muted = Color(0xFF8A91A3);
   static const Color _fieldBorder = Color(0xFFE0E2EA);
 
   @override
   void initState() {
     super.initState();
-    _emailController = TextEditingController(text: widget.initialEmail);
+    _emailController = TextEditingController();
   }
 
   @override
@@ -41,6 +37,12 @@ class _ProfileSettingScreenState extends State<ProfileSettingScreen> {
 
   @override
   Widget build(BuildContext context) {
+    final user = context.watch<AuthProvider>().user;
+    if (!_loadedUserEmail) {
+      _emailController.text = user?.email ?? '';
+      _loadedUserEmail = true;
+    }
+
     return Scaffold(
       backgroundColor: const Color(0xFFFDFDFF),
       body: SafeArea(
@@ -51,7 +53,10 @@ class _ProfileSettingScreenState extends State<ProfileSettingScreen> {
             padding: const EdgeInsets.fromLTRB(24, 14, 24, 28),
             child: ConstrainedBox(
               constraints: BoxConstraints(
-                minHeight: MediaQuery.of(context).size.height - MediaQuery.of(context).padding.vertical - 42,
+                minHeight:
+                    MediaQuery.of(context).size.height -
+                    MediaQuery.of(context).padding.vertical -
+                    42,
               ),
               child: Column(
                 crossAxisAlignment: CrossAxisAlignment.start,
@@ -59,7 +64,23 @@ class _ProfileSettingScreenState extends State<ProfileSettingScreen> {
                   _TopBar(onBack: () => Navigator.of(context).maybePop()),
                   const SizedBox(height: 28),
                   Center(
-                    child: _ProfileAvatar(assetPath: widget.avatarAssetPath),
+                    child: _ProfileAvatar(
+                      avatarUrl: user?.avatarUrl,
+                      initials: user?.initials ?? 'U',
+                    ),
+                  ),
+                  const SizedBox(height: 10),
+                  Center(
+                    child: Text(
+                      user?.name ?? 'User',
+                      maxLines: 1,
+                      overflow: TextOverflow.ellipsis,
+                      style: const TextStyle(
+                        color: _text,
+                        fontSize: 15,
+                        fontWeight: FontWeight.w800,
+                      ),
+                    ),
                   ),
                   const SizedBox(height: 28),
                   const _FieldLabel('Email'),
@@ -89,7 +110,10 @@ class _ProfileSettingScreenState extends State<ProfileSettingScreen> {
                       fontWeight: FontWeight.w600,
                     ),
                     decoration: _inputDecoration(hint: '********').copyWith(
-                      suffixIconConstraints: const BoxConstraints(minWidth: 118, minHeight: 48),
+                      suffixIconConstraints: const BoxConstraints(
+                        minWidth: 118,
+                        minHeight: 48,
+                      ),
                       suffixIcon: TextButton(
                         onPressed: _openChangePassword,
                         style: TextButton.styleFrom(
@@ -172,19 +196,25 @@ class _ProfileSettingScreenState extends State<ProfileSettingScreen> {
   String? _emailValidator(String? value) {
     final email = value?.trim() ?? '';
     if (email.isEmpty) return 'Email is required';
-    if (!email.contains('@') || !email.contains('.')) return 'Enter a valid email address';
+    if (!email.contains('@') || !email.contains('.')) {
+      return 'Enter a valid email address';
+    }
     return null;
   }
 
   void _openChangePassword() {
-    Navigator.of(context).push(
-      MaterialPageRoute(builder: (_) => const ChangePasswordScreen()),
-    );
+    Navigator.of(
+      context,
+    ).push(MaterialPageRoute(builder: (_) => const ChangePasswordScreen()));
   }
 
-  void _saveProfile() {
+  Future<void> _saveProfile() async {
     if (!_formKey.currentState!.validate()) return;
-    widget.onEmailSaved?.call(_emailController.text.trim());
+    final email = _emailController.text.trim();
+    await context.read<AuthProvider>().updateEmail(email);
+    widget.onEmailSaved?.call(email);
+    if (!mounted) return;
+
     ScaffoldMessenger.of(context).showSnackBar(
       const SnackBar(content: Text('Profile updated successfully.')),
     );
@@ -227,9 +257,10 @@ class _TopBar extends StatelessWidget {
 }
 
 class _ProfileAvatar extends StatelessWidget {
-  const _ProfileAvatar({this.assetPath});
+  const _ProfileAvatar({this.avatarUrl, required this.initials});
 
-  final String? assetPath;
+  final String? avatarUrl;
+  final String initials;
 
   @override
   Widget build(BuildContext context) {
@@ -246,14 +277,14 @@ class _ProfileAvatar extends StatelessWidget {
             ),
             padding: const EdgeInsets.all(4),
             child: ClipOval(
-              child: assetPath == null
-                  ? const _AvatarFallback()
-                  : Image.asset(
-                      assetPath!,
+              child: avatarUrl == null || avatarUrl!.trim().isEmpty
+                  ? _AvatarFallback(initials: initials)
+                  : AppPhotoImage(
+                      imageUrl: avatarUrl!,
                       width: double.infinity,
                       height: double.infinity,
                       fit: BoxFit.cover,
-                      errorBuilder: (_, __, ___) => const _AvatarFallback(),
+                      errorBuilder: (_) => _AvatarFallback(initials: initials),
                     ),
             ),
           ),
@@ -268,7 +299,11 @@ class _ProfileAvatar extends StatelessWidget {
                 shape: BoxShape.circle,
                 border: Border.all(color: Colors.white, width: 2),
               ),
-              child: const Icon(Icons.edit_rounded, size: 13, color: Color(0xFF8179DC)),
+              child: const Icon(
+                Icons.edit_rounded,
+                size: 13,
+                color: Color(0xFF8179DC),
+              ),
             ),
           ),
         ],
@@ -278,7 +313,9 @@ class _ProfileAvatar extends StatelessWidget {
 }
 
 class _AvatarFallback extends StatelessWidget {
-  const _AvatarFallback();
+  const _AvatarFallback({required this.initials});
+
+  final String initials;
 
   @override
   Widget build(BuildContext context) {
@@ -291,7 +328,15 @@ class _AvatarFallback extends StatelessWidget {
           end: Alignment.bottomRight,
         ),
       ),
-      child: const Text('👩🏻', style: TextStyle(fontSize: 48)),
+      child: Text(
+        initials,
+        maxLines: 1,
+        style: const TextStyle(
+          color: Color(0xFF8179DC),
+          fontSize: 28,
+          fontWeight: FontWeight.w900,
+        ),
+      ),
     );
   }
 }

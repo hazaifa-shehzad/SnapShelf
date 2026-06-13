@@ -1,8 +1,18 @@
 import 'package:flutter/material.dart';
+import 'package:provider/provider.dart';
 
+import '../../../core/routes/route_names.dart';
+import '../../../data/models/album_model.dart';
+import '../../../providers/auth_provider.dart';
+import '../../../providers/album_provider.dart';
+import '../../../providers/photo_provider.dart';
+import '../../albums/screens/album_detail_screen.dart';
+import '../../albums/screens/all_albums_screen.dart';
+import '../../albums/screens/empty_album_screen.dart';
+import '../../photos/screens/all_photos_screen.dart';
 import '../../profile/widgets/profile_drawer.dart';
-import '../../upload/screens/choose_album_screen.dart';
 import '../../upload/screens/upload_photo_screen.dart';
+import '../../upload/widgets/create_album_dialog.dart';
 import '../widgets/album_preview_card.dart';
 import '../widgets/home_action_card.dart';
 import '../widgets/home_header.dart';
@@ -22,58 +32,25 @@ class HomeScreen extends StatefulWidget {
 class _HomeScreenState extends State<HomeScreen> {
   final GlobalKey<ScaffoldState> _scaffoldKey = GlobalKey<ScaffoldState>();
 
-  static const List<String> _recentUploads = [
-    'https://images.unsplash.com/photo-1500530855697-b586d89ba3ee?auto=format&fit=crop&w=400&q=80',
-    'https://images.unsplash.com/photo-1507525428034-b723cf961d3e?auto=format&fit=crop&w=400&q=80',
-    'https://images.unsplash.com/photo-1500534314209-a25ddb2bd429?auto=format&fit=crop&w=400&q=80',
-    'https://images.unsplash.com/photo-1472214103451-9374bd1c798e?auto=format&fit=crop&w=400&q=80',
-  ];
-
-  static const List<_AlbumData> _albums = [
-    _AlbumData(
-      title: 'Vacations',
-      photos: 124,
-      folderColor: Color(0xFFFFC4CD),
-      tabColor: Color(0xFFFF6F91),
-    ),
-    _AlbumData(
-      title: 'Birthdays',
-      photos: 78,
-      folderColor: Color(0xFFDCD9FA),
-      tabColor: Color(0xFF7770D9),
-    ),
-    _AlbumData(
-      title: 'Weddings',
-      photos: 150,
-      folderColor: Color(0xFFBDEDEC),
-      tabColor: Color(0xFF42CAC6),
-    ),
-    _AlbumData(
-      title: 'Concerts',
-      photos: 56,
-      folderColor: Color(0xFFC8DCFF),
-      tabColor: Color(0xFF516BCC),
-    ),
-    _AlbumData(
-      title: 'Road Trips',
-      photos: 89,
-      folderColor: Color(0xFFFFDFB7),
-      tabColor: Color(0xFFFFB062),
-    ),
-    _AlbumData(
-      title: 'Reunions',
-      photos: 42,
-      folderColor: Color(0xFFECC8FF),
-      tabColor: Color(0xFFC961E6),
-    ),
+  static const List<_AlbumPalette> _albumPalettes = [
+    _AlbumPalette(folderColor: Color(0xFFFFC4CD), tabColor: Color(0xFFFF6F91)),
+    _AlbumPalette(folderColor: Color(0xFFDCD9FA), tabColor: Color(0xFF7770D9)),
+    _AlbumPalette(folderColor: Color(0xFFBDEDEC), tabColor: Color(0xFF42CAC6)),
+    _AlbumPalette(folderColor: Color(0xFFC8DCFF), tabColor: Color(0xFF516BCC)),
+    _AlbumPalette(folderColor: Color(0xFFFFDFB7), tabColor: Color(0xFFFFB062)),
+    _AlbumPalette(folderColor: Color(0xFFECC8FF), tabColor: Color(0xFFC961E6)),
   ];
 
   @override
   Widget build(BuildContext context) {
+    final recentPhotos = context.watch<PhotoProvider>().recentPhotos;
+    final albums = context.watch<AlbumProvider>().albums;
+    final user = context.watch<AuthProvider>().user;
+
     return Scaffold(
       key: _scaffoldKey,
       backgroundColor: const Color(0xFFFAFAFC),
-      drawer: const ProfileDrawer(),
+      drawer: ProfileDrawer(onLogout: () => _logout(context)),
       body: SafeArea(
         child: SingleChildScrollView(
           physics: const BouncingScrollPhysics(),
@@ -82,10 +59,10 @@ class _HomeScreenState extends State<HomeScreen> {
             crossAxisAlignment: CrossAxisAlignment.start,
             children: [
               HomeHeader(
-                name: 'Rig',
+                name: user?.name ?? 'User',
                 subtitle: 'What would you like to do today?',
-                avatarUrl:
-                    'https://images.unsplash.com/photo-1494790108377-be9c29b29330?auto=format&fit=crop&w=120&q=80',
+                avatarUrl: user?.avatarUrl,
+                initials: user?.initials ?? 'U',
                 onMenuTap: () => _scaffoldKey.currentState?.openDrawer(),
               ),
               const SizedBox(height: 34),
@@ -111,7 +88,11 @@ class _HomeScreenState extends State<HomeScreen> {
                       icon: Icons.image_outlined,
                       backgroundColor: const Color(0xFFDCE8FF),
                       iconColor: const Color(0xFF5A83EC),
-                      onTap: () => _showMessage(context, 'All photos screen coming soon'),
+                      onTap: () => Navigator.of(context).push(
+                        MaterialPageRoute(
+                          builder: (_) => const AllPhotosScreen(),
+                        ),
+                      ),
                     ),
                   ),
                   Expanded(
@@ -120,11 +101,7 @@ class _HomeScreenState extends State<HomeScreen> {
                       icon: Icons.create_new_folder_outlined,
                       backgroundColor: const Color(0xFFFFDDE7),
                       iconColor: const Color(0xFFFF7D9B),
-                      onTap: () => Navigator.of(context).push(
-                        MaterialPageRoute(
-                          builder: (_) => const ChooseAlbumScreen(),
-                        ),
-                      ),
+                      onTap: _createAlbum,
                     ),
                   ),
                 ],
@@ -133,50 +110,61 @@ class _HomeScreenState extends State<HomeScreen> {
               _SectionHeader(
                 title: 'Recent Uploads',
                 actionText: 'View All',
-                onActionTap: () => _showMessage(context, 'View all recent uploads'),
-              ),
-              const SizedBox(height: 14),
-              SizedBox(
-                height: 90,
-                child: ListView.builder(
-                  physics: const BouncingScrollPhysics(),
-                  scrollDirection: Axis.horizontal,
-                  itemCount: _recentUploads.length,
-                  itemBuilder: (context, index) {
-                    return RecentUploadCard(imageUrl: _recentUploads[index]);
-                  },
+                onActionTap: () => Navigator.of(context).push(
+                  MaterialPageRoute(builder: (_) => const AllPhotosScreen()),
                 ),
               ),
+              const SizedBox(height: 14),
+              recentPhotos.isEmpty
+                  ? const _EmptyHomeStrip(message: 'No uploads yet')
+                  : SizedBox(
+                      height: 90,
+                      child: ListView.builder(
+                        physics: const BouncingScrollPhysics(),
+                        scrollDirection: Axis.horizontal,
+                        itemCount: recentPhotos.length,
+                        itemBuilder: (context, index) {
+                          return RecentUploadCard(
+                            imageUrl: recentPhotos[index].imageUrl,
+                          );
+                        },
+                      ),
+                    ),
               const SizedBox(height: 28),
               _SectionHeader(
                 title: 'Your Albums',
                 actionText: 'More Albums',
                 onActionTap: () => Navigator.of(context).push(
-                  MaterialPageRoute(builder: (_) => const ChooseAlbumScreen()),
+                  MaterialPageRoute(builder: (_) => const AllAlbumsScreen()),
                 ),
               ),
               const SizedBox(height: 15),
-              GridView.builder(
-                itemCount: _albums.length,
-                shrinkWrap: true,
-                physics: const NeverScrollableScrollPhysics(),
-                gridDelegate: const SliverGridDelegateWithFixedCrossAxisCount(
-                  crossAxisCount: 3,
-                  crossAxisSpacing: 14,
-                  mainAxisSpacing: 18,
-                  childAspectRatio: 0.78,
-                ),
-                itemBuilder: (context, index) {
-                  final album = _albums[index];
-                  return AlbumPreviewCard(
-                    title: album.title,
-                    photoCount: album.photos,
-                    folderColor: album.folderColor,
-                    tabColor: album.tabColor,
-                    onTap: () => _showMessage(context, '${album.title} album opened'),
-                  );
-                },
-              ),
+              albums.isEmpty
+                  ? const _EmptyHomeStrip(message: 'No albums yet')
+                  : GridView.builder(
+                      itemCount: albums.length,
+                      shrinkWrap: true,
+                      physics: const NeverScrollableScrollPhysics(),
+                      gridDelegate:
+                          const SliverGridDelegateWithFixedCrossAxisCount(
+                            crossAxisCount: 3,
+                            crossAxisSpacing: 14,
+                            mainAxisSpacing: 18,
+                            childAspectRatio: 0.78,
+                          ),
+                      itemBuilder: (context, index) {
+                        final album = albums[index];
+                        final palette = _paletteFor(index);
+                        return AlbumPreviewCard(
+                          title: album.title,
+                          photoCount: album.photoCount,
+                          folderColor: palette.folderColor,
+                          tabColor: palette.tabColor,
+                          onTap: () =>
+                              _openAlbum(context, album, palette.tabColor),
+                        );
+                      },
+                    ),
             ],
           ),
         ),
@@ -184,13 +172,50 @@ class _HomeScreenState extends State<HomeScreen> {
     );
   }
 
-  void _showMessage(BuildContext context, String message) {
-    ScaffoldMessenger.of(context).showSnackBar(
-      SnackBar(
-        behavior: SnackBarBehavior.floating,
-        content: Text(message),
+  _AlbumPalette _paletteFor(int index) {
+    return _albumPalettes[index % _albumPalettes.length];
+  }
+
+  Future<void> _createAlbum() async {
+    final String? createdName = await showDialog<String>(
+      context: context,
+      barrierColor: const Color(0xFFAAA8DB).withOpacity(0.42),
+      builder: (_) => const CreateAlbumDialog(),
+    );
+
+    if (!mounted || createdName == null || createdName.trim().isEmpty) return;
+    context.read<AlbumProvider>().addAlbum(createdName);
+  }
+
+  void _openAlbum(BuildContext context, AlbumModel album, Color accentColor) {
+    if (album.photoCount == 0) {
+      Navigator.of(context).push(
+        MaterialPageRoute(
+          builder: (_) => EmptyAlbumScreen(albumTitle: album.title),
+        ),
+      );
+      return;
+    }
+
+    Navigator.of(context).push(
+      MaterialPageRoute(
+        builder: (_) => AlbumDetailScreen(
+          albumId: album.id,
+          albumTitle: album.title,
+          accentColor: accentColor,
+        ),
       ),
     );
+  }
+
+  Future<void> _logout(BuildContext context) async {
+    final navigator = Navigator.of(context);
+    final authProvider = context.read<AuthProvider>();
+
+    await authProvider.logout();
+    if (!mounted) return;
+
+    navigator.pushNamedAndRemoveUntil(RouteNames.login, (route) => false);
   }
 }
 
@@ -240,16 +265,36 @@ class _SectionHeader extends StatelessWidget {
   }
 }
 
-class _AlbumData {
-  const _AlbumData({
-    required this.title,
-    required this.photos,
-    required this.folderColor,
-    required this.tabColor,
-  });
+class _AlbumPalette {
+  const _AlbumPalette({required this.folderColor, required this.tabColor});
 
-  final String title;
-  final int photos;
   final Color folderColor;
   final Color tabColor;
+}
+
+class _EmptyHomeStrip extends StatelessWidget {
+  const _EmptyHomeStrip({required this.message});
+
+  final String message;
+
+  @override
+  Widget build(BuildContext context) {
+    return Container(
+      height: 90,
+      width: double.infinity,
+      alignment: Alignment.center,
+      decoration: BoxDecoration(
+        color: const Color(0xFFF0F0FA),
+        borderRadius: BorderRadius.circular(10),
+      ),
+      child: Text(
+        message,
+        style: const TextStyle(
+          color: HomeScreen._textMuted,
+          fontSize: 13,
+          fontWeight: FontWeight.w700,
+        ),
+      ),
+    );
+  }
 }

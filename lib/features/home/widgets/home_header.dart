@@ -1,17 +1,21 @@
 import 'package:flutter/material.dart';
 
+import '../../../core/widgets/app_photo_image.dart';
+
 class HomeHeader extends StatelessWidget {
   const HomeHeader({
     super.key,
     required this.name,
     required this.subtitle,
     this.avatarUrl,
+    this.initials = 'U',
     this.onMenuTap,
   });
 
   final String name;
   final String subtitle;
   final String? avatarUrl;
+  final String initials;
   final VoidCallback? onMenuTap;
 
   static const Color _primary = Color(0xFF7C74E8);
@@ -33,11 +37,7 @@ class HomeHeader extends StatelessWidget {
               color: const Color(0xFFF0EEFF),
               borderRadius: BorderRadius.circular(10),
             ),
-            child: const Icon(
-              Icons.menu_rounded,
-              color: _primary,
-              size: 21,
-            ),
+            child: const Icon(Icons.menu_rounded, color: _primary, size: 21),
           ),
         ),
         const SizedBox(width: 12),
@@ -88,12 +88,12 @@ class HomeHeader extends StatelessWidget {
             ],
           ),
           child: ClipOval(
-            child: avatarUrl == null
+            child: avatarUrl == null || avatarUrl!.trim().isEmpty
                 ? _avatarFallback()
-                : Image.network(
-                    avatarUrl!,
+                : AppPhotoImage(
+                    imageUrl: avatarUrl!,
                     fit: BoxFit.cover,
-                    errorBuilder: (_, __, ___) => _avatarFallback(),
+                    errorBuilder: (_) => _avatarFallback(),
                   ),
           ),
         ),
@@ -105,10 +105,14 @@ class HomeHeader extends StatelessWidget {
     return Container(
       color: const Color(0xFFFFE2E6),
       alignment: Alignment.center,
-      child: const Icon(
-        Icons.person_rounded,
-        color: Color(0xFFEF7D8D),
-        size: 22,
+      child: Text(
+        initials,
+        maxLines: 1,
+        style: const TextStyle(
+          color: Color(0xFFEF7D8D),
+          fontSize: 13,
+          fontWeight: FontWeight.w900,
+        ),
       ),
     );
   }

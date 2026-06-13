@@ -1,6 +1,5 @@
 import 'package:flutter/material.dart';
 
-import '../data/dummy/dummy_user.dart';
 import '../data/models/user_model.dart';
 import '../data/services/local_storage_service.dart';
 
@@ -28,11 +27,11 @@ class AuthProvider extends ChangeNotifier {
 
     if (_isAuthenticated) {
       final email = await LocalStorageService.getUserEmail();
-      final name = await LocalStorageService.getUserName();
-      _user = DummyUser.currentUser.copyWith(
-        email: email ?? DummyUser.currentUser.email,
-        name: name ?? DummyUser.currentUser.name,
-      );
+      if (email != null && email.trim().isNotEmpty) {
+        _user = _userFromEmail(email.trim());
+      } else {
+        _isAuthenticated = false;
+      }
     }
 
     _setLoading(false);
@@ -55,11 +54,11 @@ class AuthProvider extends ChangeNotifier {
       return false;
     }
 
-    _user = DummyUser.currentUser.copyWith(email: email.trim());
+    _user = _userFromEmail(email.trim());
     _isAuthenticated = true;
 
     await LocalStorageService.saveLogin(
-      email: email.trim(),
+      email: _user!.email,
       name: _user!.name,
       rememberMe: _rememberMe,
     );
@@ -78,7 +77,9 @@ class AuthProvider extends ChangeNotifier {
 
     await Future<void>.delayed(const Duration(milliseconds: 500));
 
-    if (name.trim().isEmpty || email.trim().isEmpty || password.trim().isEmpty) {
+    if (name.trim().isEmpty ||
+        email.trim().isEmpty ||
+        password.trim().isEmpty) {
       _errorMessage = 'Please fill all required fields.';
       _setLoading(false);
       return false;
@@ -108,6 +109,23 @@ class AuthProvider extends ChangeNotifier {
     await Future<void>.delayed(const Duration(milliseconds: 500));
     _setLoading(false);
     return email.trim().isNotEmpty;
+  }
+
+  Future<void> updateEmail(String email) async {
+    final trimmedEmail = email.trim();
+    if (trimmedEmail.isEmpty || _user == null) return;
+
+    _user = _user!.copyWith(
+      email: trimmedEmail,
+      name: _displayNameFromEmail(trimmedEmail),
+    );
+
+    await LocalStorageService.saveLogin(
+      email: _user!.email,
+      name: _user!.name,
+      rememberMe: _rememberMe,
+    );
+    notifyListeners();
   }
 
   Future<bool> verifyOtp(String code) async {
@@ -151,5 +169,24 @@ class AuthProvider extends ChangeNotifier {
   void _clearError() {
     _errorMessage = null;
     notifyListeners();
+  }
+
+  UserModel _userFromEmail(String email) {
+    return UserModel(
+      id: email,
+      name: _displayNameFromEmail(email),
+      email: email,
+      createdAt: DateTime.now(),
+    );
+  }
+
+  String _displayNameFromEmail(String email) {
+    final localPart = email.split('@').first.trim();
+    if (localPart.isEmpty) return 'User';
+    return localPart
+        .split(RegExp(r'[._\-\s]+'))
+        .where((part) => part.isNotEmpty)
+        .map((part) => '${part[0].toUpperCase()}${part.substring(1)}')
+        .join(' ');
   }
 }

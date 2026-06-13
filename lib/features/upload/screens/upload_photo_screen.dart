@@ -1,9 +1,15 @@
 import 'dart:async';
+import 'dart:io';
 
 import 'package:flutter/material.dart';
 import 'package:image_picker/image_picker.dart';
+import 'package:path_provider/path_provider.dart';
+import 'package:provider/provider.dart';
 
+import '../../../data/models/photo_model.dart';
 import '../../../data/services/image_picker_service.dart';
+import '../../../providers/album_provider.dart';
+import '../../../providers/photo_provider.dart';
 import '../widgets/upload_drop_box.dart';
 import '../widgets/upload_progress_tile.dart';
 import 'choose_album_screen.dart';
@@ -140,8 +146,8 @@ class _UploadPhotoScreenState extends State<UploadPhotoScreen> {
     setState(() => _isPickingFiles = true);
 
     try {
-      final List<XFile> selectedFiles =
-          await _imagePickerService.pickMultiplePhotos();
+      final List<XFile> selectedFiles = await _imagePickerService
+          .pickMultiplePhotos();
       if (!mounted) return;
 
       if (selectedFiles.isEmpty) {
@@ -191,6 +197,7 @@ class _UploadPhotoScreenState extends State<UploadPhotoScreen> {
         _UploadItem(
           id: '${DateTime.now().microsecondsSinceEpoch}-$i',
           fileName: file.name,
+          filePath: await _savePickedFile(file, i),
           sizeMb: sizeMb,
           secondsRemaining: 18 + (i * 8),
           progress: 0,
@@ -211,10 +218,12 @@ class _UploadPhotoScreenState extends State<UploadPhotoScreen> {
           if (item.progress >= 1) continue;
 
           final double step = (0.08 - (i * 0.01)).clamp(0.03, 0.08);
-          final double nextProgress =
-              (item.progress + step).clamp(0.0, 1.0).toDouble();
-          final int nextSeconds =
-              (item.secondsRemaining - 2).clamp(0, 999).toInt();
+          final double nextProgress = (item.progress + step)
+              .clamp(0.0, 1.0)
+              .toDouble();
+          final int nextSeconds = (item.secondsRemaining - 2)
+              .clamp(0, 999)
+              .toInt();
 
           _uploads[i] = item.copyWith(
             progress: nextProgress,
@@ -230,8 +239,7 @@ class _UploadPhotoScreenState extends State<UploadPhotoScreen> {
   }
 
   String _statusText(_UploadItem item) {
-    final int percent =
-        (item.progress * 100).round().clamp(0, 100).toInt();
+    final int percent = (item.progress * 100).round().clamp(0, 100).toInt();
     if (item.progress >= 1) return '100% - Upload completed';
     return '$percent% - ${item.secondsRemaining} sec remaining';
   }
@@ -242,18 +250,68 @@ class _UploadPhotoScreenState extends State<UploadPhotoScreen> {
   }
 
   Future<void> _chooseAlbum() async {
-    final selectedAlbum = await Navigator.of(context).push<String>(
+    final selectedAlbumId = await Navigator.of(context).push<String>(
       MaterialPageRoute(builder: (_) => const ChooseAlbumScreen()),
     );
 
-    if (!mounted || selectedAlbum == null) return;
+    if (!mounted || selectedAlbumId == null) return;
+
+    final albumProvider = context.read<AlbumProvider>();
+    final photoProvider = context.read<PhotoProvider>();
+    final selectedAlbum = albumProvider.getAlbumById(selectedAlbumId);
+    if (selectedAlbum == null) return;
+
+    final now = DateTime.now();
+    for (int i = 0; i < _uploads.length; i++) {
+      final item = _uploads[i];
+      final photo = PhotoModel(
+        id: 'photo_${now.microsecondsSinceEpoch}_$i',
+        albumId: selectedAlbumId,
+        title: item.fileName,
+        imageUrl: item.filePath,
+        size: '${item.sizeMb} MB',
+        uploadedAt: now.add(Duration(microseconds: i)),
+      );
+
+      photoProvider.addPhoto(photo);
+      albumProvider.incrementPhotoCount(
+        selectedAlbumId,
+        coverImageUrl: photo.imageUrl,
+      );
+    }
+
+    setState(() => _uploads.clear());
 
     ScaffoldMessenger.of(context).showSnackBar(
       SnackBar(
         behavior: SnackBarBehavior.floating,
-        content: Text('Photos added to $selectedAlbum'),
+        content: Text('Photos added to ${selectedAlbum.title}'),
       ),
     );
+  }
+
+  Future<String> _savePickedFile(XFile file, int index) async {
+    final appDirectory = await getApplicationDocumentsDirectory();
+    final uploadsDirectory = Directory(
+      '${appDirectory.path}${Platform.pathSeparator}uploads',
+    );
+    if (!await uploadsDirectory.exists()) {
+      await uploadsDirectory.create(recursive: true);
+    }
+
+    final extension = _fileExtension(file.name);
+    final fileName =
+        '${DateTime.now().microsecondsSinceEpoch}_$index$extension';
+    final savedPath =
+        '${uploadsDirectory.path}${Platform.pathSeparator}$fileName';
+    await file.saveTo(savedPath);
+    return savedPath;
+  }
+
+  String _fileExtension(String fileName) {
+    final dotIndex = fileName.lastIndexOf('.');
+    if (dotIndex == -1 || dotIndex == fileName.length - 1) return '.jpg';
+    return fileName.substring(dotIndex);
   }
 }
 
@@ -261,6 +319,7 @@ class _UploadItem {
   const _UploadItem({
     required this.id,
     required this.fileName,
+    required this.filePath,
     required this.sizeMb,
     required this.secondsRemaining,
     required this.progress,
@@ -268,6 +327,7 @@ class _UploadItem {
 
   final String id;
   final String fileName;
+  final String filePath;
   final int sizeMb;
   final int secondsRemaining;
   final double progress;
@@ -275,6 +335,7 @@ class _UploadItem {
   _UploadItem copyWith({
     String? id,
     String? fileName,
+    String? filePath,
     int? sizeMb,
     int? secondsRemaining,
     double? progress,
@@ -282,6 +343,7 @@ class _UploadItem {
     return _UploadItem(
       id: id ?? this.id,
       fileName: fileName ?? this.fileName,
+      filePath: filePath ?? this.filePath,
       sizeMb: sizeMb ?? this.sizeMb,
       secondsRemaining: secondsRemaining ?? this.secondsRemaining,
       progress: progress ?? this.progress,

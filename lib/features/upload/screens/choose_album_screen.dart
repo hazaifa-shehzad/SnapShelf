@@ -1,5 +1,7 @@
 import 'package:flutter/material.dart';
+import 'package:provider/provider.dart';
 
+import '../../../providers/album_provider.dart';
 import '../widgets/album_radio_tile.dart';
 import '../widgets/create_album_dialog.dart';
 
@@ -11,8 +13,7 @@ class ChooseAlbumScreen extends StatefulWidget {
 }
 
 class _ChooseAlbumScreenState extends State<ChooseAlbumScreen> {
-  final List<String> _albums = <String>['Album 1', 'Album 2', 'Album 3'];
-  String _selectedAlbum = 'Album 1';
+  String? _selectedAlbumId;
 
   static const Color _primary = Color(0xFF7C74E8);
   static const Color _textDark = Color(0xFF171725);
@@ -20,6 +21,13 @@ class _ChooseAlbumScreenState extends State<ChooseAlbumScreen> {
 
   @override
   Widget build(BuildContext context) {
+    final albumProvider = context.watch<AlbumProvider>();
+    final albums = albumProvider.albums;
+    if (_selectedAlbumId == null ||
+        !albums.any((album) => album.id == _selectedAlbumId)) {
+      _selectedAlbumId = albums.isEmpty ? null : albums.first.id;
+    }
+
     return Scaffold(
       backgroundColor: const Color(0xFFFAFAFC),
       body: SafeArea(
@@ -67,23 +75,35 @@ class _ChooseAlbumScreenState extends State<ChooseAlbumScreen> {
               ),
               const SizedBox(height: 40),
               Expanded(
-                child: ListView.separated(
-                  physics: const BouncingScrollPhysics(),
-                  itemCount: _albums.length,
-                  separatorBuilder: (_, __) => const SizedBox(height: 14),
-                  itemBuilder: (context, index) {
-                    final String album = _albums[index];
-                    return AlbumRadioTile(
-                      title: album,
-                      value: album,
-                      groupValue: _selectedAlbum,
-                      onChanged: (value) {
-                        if (value == null) return;
-                        setState(() => _selectedAlbum = value);
-                      },
-                    );
-                  },
-                ),
+                child: albums.isEmpty
+                    ? const Center(
+                        child: Text(
+                          'Create an album to continue.',
+                          style: TextStyle(
+                            color: _textMuted,
+                            fontSize: 13,
+                            fontWeight: FontWeight.w700,
+                          ),
+                        ),
+                      )
+                    : ListView.separated(
+                        physics: const BouncingScrollPhysics(),
+                        itemCount: albums.length,
+                        separatorBuilder: (context, index) =>
+                            const SizedBox(height: 14),
+                        itemBuilder: (context, index) {
+                          final album = albums[index];
+                          return AlbumRadioTile(
+                            title: album.title,
+                            value: album.id,
+                            groupValue: _selectedAlbumId,
+                            onChanged: (value) {
+                              if (value == null) return;
+                              setState(() => _selectedAlbumId = value);
+                            },
+                          );
+                        },
+                      ),
               ),
               SizedBox(
                 width: double.infinity,
@@ -100,10 +120,7 @@ class _ChooseAlbumScreenState extends State<ChooseAlbumScreen> {
                   ),
                   child: const Text(
                     'Select Album',
-                    style: TextStyle(
-                      fontSize: 14,
-                      fontWeight: FontWeight.w900,
-                    ),
+                    style: TextStyle(fontSize: 14, fontWeight: FontWeight.w900),
                   ),
                 ),
               ),
@@ -122,10 +139,7 @@ class _ChooseAlbumScreenState extends State<ChooseAlbumScreen> {
                   ),
                   child: const Text(
                     'Create New',
-                    style: TextStyle(
-                      fontSize: 14,
-                      fontWeight: FontWeight.w900,
-                    ),
+                    style: TextStyle(fontSize: 14, fontWeight: FontWeight.w900),
                   ),
                 ),
               ),
@@ -137,13 +151,21 @@ class _ChooseAlbumScreenState extends State<ChooseAlbumScreen> {
   }
 
   void _selectAlbum() {
+    final selectedAlbumId = _selectedAlbumId;
+    if (selectedAlbumId == null) return;
+
+    final selectedAlbum = context.read<AlbumProvider>().getAlbumById(
+      selectedAlbumId,
+    );
+    if (selectedAlbum == null) return;
+
     ScaffoldMessenger.of(context).showSnackBar(
       SnackBar(
         behavior: SnackBarBehavior.floating,
-        content: Text('Selected $_selectedAlbum'),
+        content: Text('Selected ${selectedAlbum.title}'),
       ),
     );
-    Navigator.of(context).maybePop(_selectedAlbum);
+    Navigator.of(context).maybePop(selectedAlbumId);
   }
 
   Future<void> _openCreateAlbumDialog() async {
@@ -153,11 +175,10 @@ class _ChooseAlbumScreenState extends State<ChooseAlbumScreen> {
       builder: (_) => const CreateAlbumDialog(),
     );
 
-    if (createdName == null || createdName.trim().isEmpty) return;
+    if (!mounted || createdName == null || createdName.trim().isEmpty) return;
 
-    setState(() {
-      _albums.add(createdName.trim());
-      _selectedAlbum = createdName.trim();
-    });
+    final albumProvider = context.read<AlbumProvider>();
+    final createdAlbum = albumProvider.addAlbum(createdName.trim());
+    setState(() => _selectedAlbumId = createdAlbum?.id);
   }
 }

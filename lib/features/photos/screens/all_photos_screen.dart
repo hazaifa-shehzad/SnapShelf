@@ -1,5 +1,9 @@
 import 'package:flutter/material.dart';
+import 'package:provider/provider.dart';
 
+import '../../../data/models/photo_model.dart';
+import '../../../providers/album_provider.dart';
+import '../../../providers/photo_provider.dart';
 import '../widgets/delete_photo_dialog.dart';
 import '../widgets/photo_image_data.dart';
 import '../widgets/photo_grid_card.dart';
@@ -14,51 +18,14 @@ class AllPhotosScreen extends StatefulWidget {
 }
 
 class _AllPhotosScreenState extends State<AllPhotosScreen> {
-  final List<PhotoImageData> _photos = [
-    PhotoImageData(
-      id: 'img345768809',
-      albumName: 'Nature',
-      imageUrl: 'https://images.unsplash.com/photo-1500530855697-b586d89ba3ee?auto=format&fit=crop&w=900&q=80',
-    ),
-    PhotoImageData(
-      id: 'img345768609',
-      albumName: 'Mountains',
-      imageUrl: 'https://images.unsplash.com/photo-1501785888041-af3ef285b470?auto=format&fit=crop&w=900&q=80',
-    ),
-    PhotoImageData(
-      id: 'img345768809',
-      albumName: 'Travel',
-      imageUrl: 'https://images.unsplash.com/photo-1500534314209-a25ddb2bd429?auto=format&fit=crop&w=900&q=80',
-    ),
-    PhotoImageData(
-      id: 'img345768609',
-      albumName: 'City',
-      imageUrl: 'https://images.unsplash.com/photo-1500534314209-a25ddb2bd429?auto=format&fit=crop&w=900&q=80',
-    ),
-    PhotoImageData(
-      id: 'img345768409',
-      albumName: 'Roads',
-      imageUrl: 'https://images.unsplash.com/photo-1470770903676-69b98201ea1c?auto=format&fit=crop&w=900&q=80',
-    ),
-    PhotoImageData(
-      id: 'img345768109',
-      albumName: 'Sunset',
-      imageUrl: 'https://images.unsplash.com/photo-1507525428034-b723cf961d3e?auto=format&fit=crop&w=900&q=80',
-    ),
-    PhotoImageData(
-      id: 'img345768909',
-      albumName: 'Flowers',
-      imageUrl: 'https://images.unsplash.com/photo-1490750967868-88aa4486c946?auto=format&fit=crop&w=900&q=80',
-    ),
-    PhotoImageData(
-      id: 'img345768209',
-      albumName: 'Sea',
-      imageUrl: 'https://images.unsplash.com/photo-1500534314209-a25ddb2bd429?auto=format&fit=crop&w=900&q=80',
-    ),
-  ];
-
   @override
   Widget build(BuildContext context) {
+    final photos = context.watch<PhotoProvider>().photos;
+    final albumProvider = context.watch<AlbumProvider>();
+    final photoData = photos
+        .map((photo) => _toPhotoImageData(albumProvider, photo))
+        .toList();
+
     return Scaffold(
       backgroundColor: const Color(0xFFF9FAFB),
       appBar: AppBar(
@@ -81,22 +48,29 @@ class _AllPhotosScreenState extends State<AllPhotosScreen> {
         ),
       ),
       body: SafeArea(
-        child: _photos.isEmpty ? const _EmptyPhotosView() : _PhotosGrid(
-          photos: _photos,
-          onPhotoTap: _openPhotoDetail,
-          onMoreTap: _openPhotoOptions,
-        ),
+        child: photoData.isEmpty
+            ? const _EmptyPhotosView()
+            : _PhotosGrid(
+                photos: photoData,
+                onPhotoTap: _openPhotoDetail,
+                onMoreTap: _openPhotoOptions,
+              ),
       ),
     );
   }
 
   void _openPhotoDetail(PhotoImageData photo) {
-    final selectedIndex = _photos.indexOf(photo);
+    final photos = context.read<PhotoProvider>().photos;
+    final albumProvider = context.read<AlbumProvider>();
+    final photoData = photos
+        .map((item) => _toPhotoImageData(albumProvider, item))
+        .toList();
+    final selectedIndex = photoData.indexWhere((item) => item.id == photo.id);
 
     Navigator.of(context).push(
       MaterialPageRoute(
         builder: (_) => PhotoDetailScreen(
-          photos: List<PhotoImageData>.unmodifiable(_photos),
+          photos: List<PhotoImageData>.unmodifiable(photoData),
           initialIndex: selectedIndex < 0 ? 0 : selectedIndex,
         ),
       ),
@@ -118,20 +92,32 @@ class _AllPhotosScreenState extends State<AllPhotosScreen> {
     final shouldDelete = await DeletePhotoDialog.show(context);
     if (!mounted || shouldDelete != true) return;
 
-    setState(() {
-      _photos.remove(photo);
-    });
+    final photoModel = context.read<PhotoProvider>().getPhotoById(photo.id);
+    if (photoModel != null) {
+      context.read<PhotoProvider>().deletePhoto(photo.id);
+      context.read<AlbumProvider>().decrementPhotoCount(photoModel.albumId);
+    }
 
     _showSnackBar('${photo.id} deleted successfully');
+  }
+
+  PhotoImageData _toPhotoImageData(
+    AlbumProvider albumProvider,
+    PhotoModel photo,
+  ) {
+    final album = albumProvider.getAlbumById(photo.albumId);
+    return PhotoImageData(
+      id: photo.id,
+      imageUrl: photo.imageUrl,
+      albumName: album?.title,
+      createdAt: photo.uploadedAt,
+    );
   }
 
   void _showSnackBar(String message) {
     ScaffoldMessenger.of(context).hideCurrentSnackBar();
     ScaffoldMessenger.of(context).showSnackBar(
-      SnackBar(
-        content: Text(message),
-        behavior: SnackBarBehavior.floating,
-      ),
+      SnackBar(content: Text(message), behavior: SnackBarBehavior.floating),
     );
   }
 }

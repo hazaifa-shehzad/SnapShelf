@@ -1,5 +1,8 @@
 import 'package:flutter/material.dart';
+import 'package:provider/provider.dart';
 
+import '../../../data/models/album_model.dart';
+import '../../../providers/album_provider.dart';
 import '../widgets/album_folder_card.dart';
 import '../widgets/album_search_field.dart';
 import 'album_detail_screen.dart';
@@ -16,50 +19,20 @@ class _AllAlbumsScreenState extends State<AllAlbumsScreen> {
   final TextEditingController _searchController = TextEditingController();
   String _query = '';
 
-  final List<_AlbumItem> _albums = const [
-    _AlbumItem(
-      title: 'Vacations',
-      photoCount: 124,
-      folderColor: Color(0xFFFFC8D4),
-      tabColor: Color(0xFFF17998),
-    ),
-    _AlbumItem(
-      title: 'Birthdays',
-      photoCount: 78,
-      folderColor: Color(0xFFDAD8FF),
-      tabColor: Color(0xFF7B73DC),
-    ),
-    _AlbumItem(
-      title: 'Concerts',
-      photoCount: 56,
-      folderColor: Color(0xFFC6D6FF),
-      tabColor: Color(0xFF4E6ED0),
-    ),
-    _AlbumItem(
-      title: 'Road Trips',
-      photoCount: 89,
-      folderColor: Color(0xFFFFE1B9),
-      tabColor: Color(0xFFFFB665),
-    ),
-    _AlbumItem(
-      title: 'Weddings',
-      photoCount: 150,
-      folderColor: Color(0xFFBCEDED),
-      tabColor: Color(0xFF45C6C8),
-    ),
-    _AlbumItem(
-      title: 'Reunions',
-      photoCount: 42,
-      folderColor: Color(0xFFECC8FF),
-      tabColor: Color(0xFFC46BE8),
-    ),
+  static const List<_AlbumPalette> _albumPalettes = [
+    _AlbumPalette(folderColor: Color(0xFFFFC8D4), tabColor: Color(0xFFF17998)),
+    _AlbumPalette(folderColor: Color(0xFFDAD8FF), tabColor: Color(0xFF7B73DC)),
+    _AlbumPalette(folderColor: Color(0xFFC6D6FF), tabColor: Color(0xFF4E6ED0)),
+    _AlbumPalette(folderColor: Color(0xFFFFE1B9), tabColor: Color(0xFFFFB665)),
+    _AlbumPalette(folderColor: Color(0xFFBCEDED), tabColor: Color(0xFF45C6C8)),
+    _AlbumPalette(folderColor: Color(0xFFECC8FF), tabColor: Color(0xFFC46BE8)),
   ];
 
-  List<_AlbumItem> get _filteredAlbums {
+  List<AlbumModel> _filteredAlbums(List<AlbumModel> albums) {
     final normalizedQuery = _query.trim().toLowerCase();
-    if (normalizedQuery.isEmpty) return _albums;
+    if (normalizedQuery.isEmpty) return albums;
 
-    return _albums.where((album) {
+    return albums.where((album) {
       return album.title.toLowerCase().contains(normalizedQuery);
     }).toList();
   }
@@ -72,7 +45,7 @@ class _AllAlbumsScreenState extends State<AllAlbumsScreen> {
 
   @override
   Widget build(BuildContext context) {
-    final albums = _filteredAlbums;
+    final albums = _filteredAlbums(context.watch<AlbumProvider>().albums);
 
     return Scaffold(
       backgroundColor: const Color(0xFFF8F8FB),
@@ -97,20 +70,23 @@ class _AllAlbumsScreenState extends State<AllAlbumsScreen> {
                       padding: const EdgeInsets.fromLTRB(22, 0, 22, 24),
                       physics: const BouncingScrollPhysics(),
                       itemCount: albums.length,
-                      gridDelegate: const SliverGridDelegateWithFixedCrossAxisCount(
-                        crossAxisCount: 2,
-                        crossAxisSpacing: 22,
-                        mainAxisSpacing: 22,
-                        childAspectRatio: 0.88,
-                      ),
+                      gridDelegate:
+                          const SliverGridDelegateWithFixedCrossAxisCount(
+                            crossAxisCount: 2,
+                            crossAxisSpacing: 22,
+                            mainAxisSpacing: 22,
+                            childAspectRatio: 0.88,
+                          ),
                       itemBuilder: (context, index) {
                         final album = albums[index];
+                        final palette = _paletteFor(index);
                         return AlbumFolderCard(
                           title: album.title,
                           subtitle: '${album.photoCount} Photos',
-                          folderColor: album.folderColor,
-                          tabColor: album.tabColor,
-                          onTap: () => _openAlbum(context, album),
+                          folderColor: palette.folderColor,
+                          tabColor: palette.tabColor,
+                          onTap: () =>
+                              _openAlbum(context, album, palette.tabColor),
                         );
                       },
                     ),
@@ -121,7 +97,11 @@ class _AllAlbumsScreenState extends State<AllAlbumsScreen> {
     );
   }
 
-  void _openAlbum(BuildContext context, _AlbumItem album) {
+  _AlbumPalette _paletteFor(int index) {
+    return _albumPalettes[index % _albumPalettes.length];
+  }
+
+  void _openAlbum(BuildContext context, AlbumModel album, Color accentColor) {
     if (album.photoCount == 0) {
       Navigator.push(
         context,
@@ -136,22 +116,12 @@ class _AllAlbumsScreenState extends State<AllAlbumsScreen> {
       context,
       MaterialPageRoute(
         builder: (_) => AlbumDetailScreen(
+          albumId: album.id,
           albumTitle: album.title,
-          accentColor: album.tabColor,
-          photos: _samplePhotos(album.title),
+          accentColor: accentColor,
         ),
       ),
     );
-  }
-
-  List<AlbumPhoto> _samplePhotos(String albumTitle) {
-    return List.generate(18, (index) {
-      final seed = '${albumTitle.toLowerCase().replaceAll(' ', '-')}-${index + 1}';
-      return AlbumPhoto(
-        fileName: 'img${345678 + index}.jpg',
-        imageUrl: 'https://picsum.photos/seed/$seed/500/650',
-      );
-    });
   }
 }
 
@@ -255,10 +225,7 @@ class _NoAlbumResult extends StatelessWidget {
             const Text(
               'Try searching with another album title.',
               textAlign: TextAlign.center,
-              style: TextStyle(
-                fontSize: 12,
-                color: Color(0xFF8B8D9B),
-              ),
+              style: TextStyle(fontSize: 12, color: Color(0xFF8B8D9B)),
             ),
           ],
         ),
@@ -267,16 +234,9 @@ class _NoAlbumResult extends StatelessWidget {
   }
 }
 
-class _AlbumItem {
-  const _AlbumItem({
-    required this.title,
-    required this.photoCount,
-    required this.folderColor,
-    required this.tabColor,
-  });
+class _AlbumPalette {
+  const _AlbumPalette({required this.folderColor, required this.tabColor});
 
-  final String title;
-  final int photoCount;
   final Color folderColor;
   final Color tabColor;
 }

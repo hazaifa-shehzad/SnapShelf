@@ -1,13 +1,21 @@
-import 'package:flutter/material.dart';
+import 'dart:convert';
 
-import '../data/dummy/dummy_photos.dart';
+import 'package:flutter/material.dart';
+import 'package:shared_preferences/shared_preferences.dart';
+
 import '../data/models/photo_model.dart';
 import '../data/services/share_service.dart';
 
 class PhotoProvider extends ChangeNotifier {
-  final List<PhotoModel> _photos = List<PhotoModel>.from(DummyPhotos.photos);
+  static const String _storageKey = 'photos';
+
+  final List<PhotoModel> _photos = <PhotoModel>[];
   String _searchQuery = '';
   PhotoModel? _selectedPhoto;
+
+  PhotoProvider() {
+    _loadPhotos();
+  }
 
   List<PhotoModel> get photos => List.unmodifiable(_photos);
   String get searchQuery => _searchQuery;
@@ -55,6 +63,7 @@ class PhotoProvider extends ChangeNotifier {
   void addPhoto(PhotoModel photo) {
     _photos.insert(0, photo);
     notifyListeners();
+    _savePhotos();
   }
 
   void updatePhoto(PhotoModel photo) {
@@ -62,12 +71,14 @@ class PhotoProvider extends ChangeNotifier {
     if (index == -1) return;
     _photos[index] = photo;
     notifyListeners();
+    _savePhotos();
   }
 
   void deletePhoto(String id) {
     _photos.removeWhere((photo) => photo.id == id);
     if (_selectedPhoto?.id == id) _selectedPhoto = null;
     notifyListeners();
+    _savePhotos();
   }
 
   void toggleFavorite(String id) {
@@ -81,9 +92,47 @@ class PhotoProvider extends ChangeNotifier {
       _selectedPhoto = _photos[index];
     }
     notifyListeners();
+    _savePhotos();
   }
 
   Future<void> sharePhoto(PhotoModel photo) {
-    return ShareService.sharePhotoUrl(title: photo.title, imageUrl: photo.imageUrl);
+    return ShareService.sharePhotoUrl(
+      title: photo.title,
+      imageUrl: photo.imageUrl,
+    );
+  }
+
+  Future<void> _loadPhotos() async {
+    final preferences = await SharedPreferences.getInstance();
+    final encodedPhotos = preferences.getString(_storageKey);
+    if (encodedPhotos == null || encodedPhotos.isEmpty || _photos.isNotEmpty) {
+      return;
+    }
+
+    final Object? decodedPhotos;
+    try {
+      decodedPhotos = jsonDecode(encodedPhotos);
+    } catch (_) {
+      return;
+    }
+
+    if (decodedPhotos is! List) return;
+
+    _photos
+      ..clear()
+      ..addAll(
+        decodedPhotos.whereType<Map>().map(
+          (json) => PhotoModel.fromJson(Map<String, dynamic>.from(json)),
+        ),
+      );
+    notifyListeners();
+  }
+
+  Future<void> _savePhotos() async {
+    final preferences = await SharedPreferences.getInstance();
+    final encodedPhotos = jsonEncode(
+      _photos.map((photo) => photo.toJson()).toList(growable: false),
+    );
+    await preferences.setString(_storageKey, encodedPhotos);
   }
 }

@@ -1,13 +1,12 @@
 import 'package:flutter/material.dart';
 
-import '../data/dummy/dummy_user.dart';
 import '../data/models/user_model.dart';
 
 class UserProvider extends ChangeNotifier {
-  UserModel _user = DummyUser.currentUser;
+  UserModel? _user;
   bool _isLoading = false;
 
-  UserModel get user => _user;
+  UserModel? get user => _user;
   bool get isLoading => _isLoading;
 
   Future<void> updateProfile({
@@ -18,11 +17,13 @@ class UserProvider extends ChangeNotifier {
   }) async {
     _setLoading(true);
     await Future<void>.delayed(const Duration(milliseconds: 350));
-    _user = _user.copyWith(
+    _user = UserModel(
+      id: _user?.id ?? DateTime.now().millisecondsSinceEpoch.toString(),
       name: name.trim(),
       email: email.trim(),
       phone: phone?.trim(),
       avatarUrl: avatarUrl,
+      createdAt: _user?.createdAt ?? DateTime.now(),
     );
     _setLoading(false);
   }
@@ -34,7 +35,8 @@ class UserProvider extends ChangeNotifier {
   }) async {
     _setLoading(true);
     await Future<void>.delayed(const Duration(milliseconds: 350));
-    final isValid = currentPassword.isNotEmpty &&
+    final isValid =
+        currentPassword.isNotEmpty &&
         newPassword.length >= 6 &&
         newPassword == confirmPassword;
     _setLoading(false);

@@ -1,5 +1,8 @@
 import 'package:flutter/material.dart';
+import 'package:provider/provider.dart';
 
+import '../../../core/widgets/app_photo_image.dart';
+import '../../../providers/auth_provider.dart';
 import '../screens/privacy_policy_screen.dart';
 import '../screens/profile_setting_screen.dart';
 import '../screens/terms_conditions_screen.dart';
@@ -10,8 +13,6 @@ import 'profile_menu_tile.dart';
 class ProfileDrawer extends StatelessWidget {
   const ProfileDrawer({
     super.key,
-    this.userName = 'Hazaifa',
-    this.avatarAssetPath,
     this.onProfileTap,
     this.onTermsTap,
     this.onPrivacyTap,
@@ -19,8 +20,6 @@ class ProfileDrawer extends StatelessWidget {
     this.onLogout,
   });
 
-  final String userName;
-  final String? avatarAssetPath;
   final VoidCallback? onProfileTap;
   final VoidCallback? onTermsTap;
   final VoidCallback? onPrivacyTap;
@@ -35,6 +34,7 @@ class ProfileDrawer extends StatelessWidget {
   Widget build(BuildContext context) {
     final size = MediaQuery.of(context).size;
     final drawerWidth = size.width < 380 ? size.width * 0.73 : 292.0;
+    final user = context.watch<AuthProvider>().user;
 
     return Drawer(
       width: drawerWidth,
@@ -48,9 +48,7 @@ class ProfileDrawer extends StatelessWidget {
         decoration: const BoxDecoration(
           color: _drawerBg,
           borderRadius: BorderRadius.horizontal(right: Radius.circular(28)),
-          border: Border(
-            right: BorderSide(color: _primary, width: 5),
-          ),
+          border: Border(right: BorderSide(color: _primary, width: 5)),
         ),
         child: SafeArea(
           child: Padding(
@@ -69,12 +67,20 @@ class ProfileDrawer extends StatelessWidget {
                       ),
                       child: IconButton(
                         padding: EdgeInsets.zero,
-                        onPressed: () => Scaffold.maybeOf(context)?.closeDrawer(),
-                        icon: const Icon(Icons.menu_rounded, size: 17, color: _primary),
+                        onPressed: () =>
+                            Scaffold.maybeOf(context)?.closeDrawer(),
+                        icon: const Icon(
+                          Icons.menu_rounded,
+                          size: 17,
+                          color: _primary,
+                        ),
                       ),
                     ),
                     const Spacer(),
-                    _Avatar(assetPath: avatarAssetPath),
+                    _Avatar(
+                      avatarUrl: user?.avatarUrl,
+                      initials: user?.initials ?? 'U',
+                    ),
                   ],
                 ),
                 const SizedBox(height: 72),
@@ -106,7 +112,12 @@ class ProfileDrawer extends StatelessWidget {
                   iconColor: const Color(0xFFFF5959),
                   onTap: () => showDeleteAccountDialog(
                     context,
-                    onDelete: onDeleteAccount ?? () => _showMessage(context, 'Delete account action confirmed.'),
+                    onDelete:
+                        onDeleteAccount ??
+                        () => _showMessage(
+                          context,
+                          'Delete account action confirmed.',
+                        ),
                   ),
                 ),
                 const Spacer(),
@@ -116,10 +127,7 @@ class ProfileDrawer extends StatelessWidget {
                   iconBackgroundColor: const Color(0xFFEDEBFF),
                   iconColor: _primary,
                   margin: EdgeInsets.zero,
-                  onTap: () => showLogoutDialog(
-                    context,
-                    onLogout: onLogout ?? () => _showMessage(context, 'Logout action confirmed.'),
-                  ),
+                  onTap: () => _confirmLogout(context),
                 ),
               ],
             ),
@@ -138,7 +146,7 @@ class ProfileDrawer extends StatelessWidget {
     Scaffold.maybeOf(context)?.closeDrawer();
     Future.delayed(const Duration(milliseconds: 150), () {
       navigator.push(
-        MaterialPageRoute(builder: (_) => ProfileSettingScreen(avatarAssetPath: avatarAssetPath)),
+        MaterialPageRoute(builder: (_) => const ProfileSettingScreen()),
       );
     });
   }
@@ -151,7 +159,9 @@ class ProfileDrawer extends StatelessWidget {
     final navigator = Navigator.of(context);
     Scaffold.maybeOf(context)?.closeDrawer();
     Future.delayed(const Duration(milliseconds: 150), () {
-      navigator.push(MaterialPageRoute(builder: (_) => const TermsConditionsScreen()));
+      navigator.push(
+        MaterialPageRoute(builder: (_) => const TermsConditionsScreen()),
+      );
     });
   }
 
@@ -163,21 +173,36 @@ class ProfileDrawer extends StatelessWidget {
     final navigator = Navigator.of(context);
     Scaffold.maybeOf(context)?.closeDrawer();
     Future.delayed(const Duration(milliseconds: 150), () {
-      navigator.push(MaterialPageRoute(builder: (_) => const PrivacyPolicyScreen()));
+      navigator.push(
+        MaterialPageRoute(builder: (_) => const PrivacyPolicyScreen()),
+      );
     });
   }
 
+  Future<void> _confirmLogout(BuildContext context) async {
+    final shouldLogout = await showLogoutDialog(context);
+    if (shouldLogout != true || !context.mounted) return;
+
+    if (onLogout != null) {
+      onLogout!();
+      return;
+    }
+
+    _showMessage(context, 'Logout action confirmed.');
+  }
+
   void _showMessage(BuildContext context, String message) {
-    ScaffoldMessenger.maybeOf(context)?.showSnackBar(
-      SnackBar(content: Text(message)),
-    );
+    ScaffoldMessenger.maybeOf(
+      context,
+    )?.showSnackBar(SnackBar(content: Text(message)));
   }
 }
 
 class _Avatar extends StatelessWidget {
-  const _Avatar({this.assetPath});
+  const _Avatar({this.avatarUrl, required this.initials});
 
-  final String? assetPath;
+  final String? avatarUrl;
+  final String initials;
 
   @override
   Widget build(BuildContext context) {
@@ -197,19 +222,21 @@ class _Avatar extends StatelessWidget {
         ],
       ),
       clipBehavior: Clip.antiAlias,
-      child: assetPath == null
-          ? const _AvatarFallback()
-          : Image.asset(
-              assetPath!,
+      child: avatarUrl == null || avatarUrl!.trim().isEmpty
+          ? _AvatarFallback(initials: initials)
+          : AppPhotoImage(
+              imageUrl: avatarUrl!,
               fit: BoxFit.cover,
-              errorBuilder: (_, __, ___) => const _AvatarFallback(),
+              errorBuilder: (_) => _AvatarFallback(initials: initials),
             ),
     );
   }
 }
 
 class _AvatarFallback extends StatelessWidget {
-  const _AvatarFallback();
+  const _AvatarFallback({required this.initials});
+
+  final String initials;
 
   @override
   Widget build(BuildContext context) {
@@ -222,7 +249,15 @@ class _AvatarFallback extends StatelessWidget {
           end: Alignment.bottomRight,
         ),
       ),
-      child: const Icon(Icons.person_rounded, color: Color(0xFF8179DC), size: 18),
+      child: Text(
+        initials,
+        maxLines: 1,
+        style: const TextStyle(
+          color: Color(0xFF8179DC),
+          fontSize: 11,
+          fontWeight: FontWeight.w900,
+        ),
+      ),
     );
   }
 }

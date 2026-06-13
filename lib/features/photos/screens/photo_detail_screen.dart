@@ -1,5 +1,6 @@
 import 'package:flutter/material.dart';
 
+import '../../../core/widgets/app_photo_image.dart';
 import '../widgets/photo_image_data.dart';
 
 class PhotoDetailScreen extends StatefulWidget {
@@ -98,25 +99,27 @@ class _PhotoDetailScreenState extends State<PhotoDetailScreen> {
                             child: PageView.builder(
                               controller: _pageController,
                               itemCount: widget.photos.length,
-                              onPageChanged: (index) => setState(() => _currentIndex = index),
+                              onPageChanged: (index) =>
+                                  setState(() => _currentIndex = index),
                               itemBuilder: (context, index) {
                                 final photo = widget.photos[index];
                                 return Hero(
                                   tag: 'photo-${photo.id}',
-                                  child: Image.network(
-                                    photo.imageUrl,
+                                  child: AppPhotoImage(
+                                    imageUrl: photo.imageUrl,
                                     width: double.infinity,
                                     height: double.infinity,
                                     fit: BoxFit.cover,
-                                    loadingBuilder: (context, child, progress) {
-                                      if (progress == null) return child;
+                                    loadingBuilder: (_) {
                                       return Container(
                                         color: const Color(0xFFF2F4F7),
                                         alignment: Alignment.center,
-                                        child: const CircularProgressIndicator(strokeWidth: 2),
+                                        child: const CircularProgressIndicator(
+                                          strokeWidth: 2,
+                                        ),
                                       );
                                     },
-                                    errorBuilder: (context, error, stackTrace) {
+                                    errorBuilder: (_) {
                                       return Container(
                                         color: const Color(0xFFF2F4F7),
                                         alignment: Alignment.center,
@@ -150,7 +153,10 @@ class _PhotoDetailScreenState extends State<PhotoDetailScreen> {
                             decoration: BoxDecoration(
                               color: const Color(0xFF0F766E),
                               shape: BoxShape.circle,
-                              border: Border.all(color: const Color(0xFF134E4A), width: 3),
+                              border: Border.all(
+                                color: const Color(0xFF134E4A),
+                                width: 3,
+                              ),
                               boxShadow: [
                                 BoxShadow(
                                   color: Colors.black.withOpacity(0.20),
@@ -204,9 +210,9 @@ class _PhotoDetailScreenState extends State<PhotoDetailScreen> {
     final currentPhoto = _currentPhoto;
     if (currentPhoto == null) return;
 
-    ScaffoldMessenger.of(context).showSnackBar(
-      SnackBar(content: Text('Share ${currentPhoto.id}')),
-    );
+    ScaffoldMessenger.of(
+      context,
+    ).showSnackBar(SnackBar(content: Text('Share ${currentPhoto.id}')));
   }
 }
 

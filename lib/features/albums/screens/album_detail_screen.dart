@@ -1,15 +1,22 @@
 import 'package:flutter/material.dart';
+import 'package:provider/provider.dart';
 
+import '../../../core/widgets/app_photo_image.dart';
+import '../../../data/models/photo_model.dart';
+import '../../../providers/album_provider.dart';
+import '../../../providers/photo_provider.dart';
 import '../widgets/album_search_field.dart';
 
 class AlbumDetailScreen extends StatefulWidget {
   const AlbumDetailScreen({
     super.key,
-    this.albumTitle = 'Birthdays',
+    this.albumId,
+    this.albumTitle = 'Album',
     this.photos,
     this.accentColor = const Color(0xFF7B73DC),
   });
 
+  final String? albumId;
   final String albumTitle;
   final List<AlbumPhoto>? photos;
   final Color accentColor;
@@ -20,20 +27,20 @@ class AlbumDetailScreen extends StatefulWidget {
 
 class _AlbumDetailScreenState extends State<AlbumDetailScreen> {
   final TextEditingController _searchController = TextEditingController();
-  late List<AlbumPhoto> _photos;
+  late List<AlbumPhoto> _localPhotos;
   String _query = '';
 
   @override
   void initState() {
     super.initState();
-    _photos = widget.photos ?? _defaultPhotos(widget.albumTitle);
+    _localPhotos = widget.photos ?? <AlbumPhoto>[];
   }
 
-  List<AlbumPhoto> get _filteredPhotos {
+  List<AlbumPhoto> _filteredPhotos(List<AlbumPhoto> photos) {
     final normalizedQuery = _query.trim().toLowerCase();
-    if (normalizedQuery.isEmpty) return _photos;
+    if (normalizedQuery.isEmpty) return photos;
 
-    return _photos.where((photo) {
+    return photos.where((photo) {
       return photo.fileName.toLowerCase().contains(normalizedQuery);
     }).toList();
   }
@@ -46,7 +53,14 @@ class _AlbumDetailScreenState extends State<AlbumDetailScreen> {
 
   @override
   Widget build(BuildContext context) {
-    final photos = _filteredPhotos;
+    final sourcePhotos = widget.albumId == null
+        ? _localPhotos
+        : context
+              .watch<PhotoProvider>()
+              .photosByAlbum(widget.albumId!)
+              .map(_toAlbumPhoto)
+              .toList();
+    final photos = _filteredPhotos(sourcePhotos);
 
     return Scaffold(
       backgroundColor: const Color(0xFFF8F8FB),
@@ -71,12 +85,13 @@ class _AlbumDetailScreenState extends State<AlbumDetailScreen> {
                       padding: const EdgeInsets.fromLTRB(22, 0, 22, 24),
                       physics: const BouncingScrollPhysics(),
                       itemCount: photos.length,
-                      gridDelegate: const SliverGridDelegateWithFixedCrossAxisCount(
-                        crossAxisCount: 2,
-                        crossAxisSpacing: 16,
-                        mainAxisSpacing: 16,
-                        childAspectRatio: 0.78,
-                      ),
+                      gridDelegate:
+                          const SliverGridDelegateWithFixedCrossAxisCount(
+                            crossAxisCount: 2,
+                            crossAxisSpacing: 16,
+                            mainAxisSpacing: 16,
+                            childAspectRatio: 0.78,
+                          ),
                       itemBuilder: (context, index) {
                         final photo = photos[index];
                         return _AlbumPhotoCard(
@@ -97,14 +112,18 @@ class _AlbumDetailScreenState extends State<AlbumDetailScreen> {
   void _openPreview(AlbumPhoto photo) {
     Navigator.push(
       context,
-      MaterialPageRoute(
-        builder: (_) => _PhotoPreviewScreen(photo: photo),
-      ),
+      MaterialPageRoute(builder: (_) => _PhotoPreviewScreen(photo: photo)),
     );
   }
 
   void _deletePhoto(AlbumPhoto photo) {
-    setState(() => _photos.remove(photo));
+    if (photo.id == null || widget.albumId == null) {
+      setState(() => _localPhotos.remove(photo));
+    } else {
+      context.read<PhotoProvider>().deletePhoto(photo.id!);
+      context.read<AlbumProvider>().decrementPhotoCount(widget.albumId!);
+    }
+
     ScaffoldMessenger.of(context).showSnackBar(
       SnackBar(
         content: Text('${photo.fileName} removed from ${widget.albumTitle}'),
@@ -114,23 +133,19 @@ class _AlbumDetailScreenState extends State<AlbumDetailScreen> {
     );
   }
 
-  List<AlbumPhoto> _defaultPhotos(String albumTitle) {
-    return List.generate(16, (index) {
-      final seed = '${albumTitle.toLowerCase().replaceAll(' ', '-')}-detail-${index + 1}';
-      return AlbumPhoto(
-        fileName: 'img${345678 + index}.jpg',
-        imageUrl: 'https://picsum.photos/seed/$seed/500/650',
-      );
-    });
+  AlbumPhoto _toAlbumPhoto(PhotoModel photo) {
+    return AlbumPhoto(
+      id: photo.id,
+      fileName: photo.title,
+      imageUrl: photo.imageUrl,
+    );
   }
 }
 
 class AlbumPhoto {
-  const AlbumPhoto({
-    required this.fileName,
-    required this.imageUrl,
-  });
+  const AlbumPhoto({this.id, required this.fileName, required this.imageUrl});
 
+  final String? id;
   final String fileName;
   final String imageUrl;
 }
@@ -269,15 +284,18 @@ class _AlbumPhotoCard extends StatelessWidget {
                   child: Stack(
                     fit: StackFit.expand,
                     children: [
-                      Image.network(
-                        photo.imageUrl,
+                      AppPhotoImage(
+                        imageUrl: photo.imageUrl,
                         fit: BoxFit.cover,
-                        loadingBuilder: (context, child, loadingProgress) {
-                          if (loadingProgress == null) return child;
-                          return _PhotoLoadingPlaceholder(accentColor: accentColor);
+                        loadingBuilder: (_) {
+                          return _PhotoLoadingPlaceholder(
+                            accentColor: accentColor,
+                          );
                         },
-                        errorBuilder: (context, error, stackTrace) {
-                          return _PhotoErrorPlaceholder(accentColor: accentColor);
+                        errorBuilder: (_) {
+                          return _PhotoErrorPlaceholder(
+                            accentColor: accentColor,
+                          );
                         },
                       ),
                       Positioned.fill(
@@ -321,10 +339,7 @@ class _PhotoLoadingPlaceholder extends StatelessWidget {
       child: SizedBox(
         height: 22,
         width: 22,
-        child: CircularProgressIndicator(
-          strokeWidth: 2,
-          color: accentColor,
-        ),
+        child: CircularProgressIndicator(strokeWidth: 2, color: accentColor),
       ),
     );
   }
@@ -410,10 +425,10 @@ class _PhotoPreviewScreen extends StatelessWidget {
         child: InteractiveViewer(
           minScale: 0.8,
           maxScale: 4,
-          child: Image.network(
-            photo.imageUrl,
+          child: AppPhotoImage(
+            imageUrl: photo.imageUrl,
             fit: BoxFit.contain,
-            errorBuilder: (context, error, stackTrace) => const Icon(
+            errorBuilder: (_) => const Icon(
               Icons.broken_image_outlined,
               color: Colors.white54,
               size: 56,

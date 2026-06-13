@@ -12,11 +12,7 @@ Future<bool?> showDeleteAccountDialog(
 }
 
 class DeleteAccountDialog extends StatelessWidget {
-  const DeleteAccountDialog({
-    super.key,
-    this.onCancel,
-    this.onDelete,
-  });
+  const DeleteAccountDialog({super.key, this.onCancel, this.onDelete});
 
   final VoidCallback? onCancel;
   final VoidCallback? onDelete;

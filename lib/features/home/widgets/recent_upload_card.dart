@@ -1,5 +1,7 @@
 import 'package:flutter/material.dart';
 
+import '../../../core/widgets/app_photo_image.dart';
+
 class RecentUploadCard extends StatelessWidget {
   const RecentUploadCard({
     super.key,
@@ -23,14 +25,11 @@ class RecentUploadCard extends StatelessWidget {
         color: const Color(0xFFEDEDFC),
       ),
       clipBehavior: Clip.antiAlias,
-      child: Image.network(
-        imageUrl,
+      child: AppPhotoImage(
+        imageUrl: imageUrl,
         fit: BoxFit.cover,
-        loadingBuilder: (context, child, loadingProgress) {
-          if (loadingProgress == null) return child;
-          return _placeholder();
-        },
-        errorBuilder: (_, __, ___) => _placeholder(),
+        loadingBuilder: (_) => _placeholder(),
+        errorBuilder: (_) => _placeholder(),
       ),
     );
   }

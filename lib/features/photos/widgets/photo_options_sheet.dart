@@ -1,5 +1,6 @@
 import 'package:flutter/material.dart';
 
+import '../../../core/widgets/app_photo_image.dart';
 import 'photo_image_data.dart';
 
 class PhotoOptionsSheet extends StatelessWidget {
@@ -77,12 +78,12 @@ class PhotoOptionsSheet extends StatelessWidget {
                 children: [
                   ClipRRect(
                     borderRadius: BorderRadius.circular(8),
-                    child: Image.network(
-                      photo.imageUrl,
+                    child: AppPhotoImage(
+                      imageUrl: photo.imageUrl,
                       width: 44,
                       height: 44,
                       fit: BoxFit.cover,
-                      errorBuilder: (_, __, ___) => Container(
+                      errorBuilder: (_) => Container(
                         width: 44,
                         height: 44,
                         color: const Color(0xFFF2F4F7),
@@ -172,7 +173,9 @@ class _OptionTile extends StatelessWidget {
 
   @override
   Widget build(BuildContext context) {
-    final color = isDestructive ? const Color(0xFFEF4444) : const Color(0xFF111827);
+    final color = isDestructive
+        ? const Color(0xFFEF4444)
+        : const Color(0xFF111827);
 
     return InkWell(
       onTap: onTap,
@@ -192,7 +195,11 @@ class _OptionTile extends StatelessWidget {
                 ),
               ),
             ),
-            Icon(Icons.chevron_right_rounded, size: 20, color: color.withOpacity(0.35)),
+            Icon(
+              Icons.chevron_right_rounded,
+              size: 20,
+              color: color.withOpacity(0.35),
+            ),
           ],
         ),
       ),
