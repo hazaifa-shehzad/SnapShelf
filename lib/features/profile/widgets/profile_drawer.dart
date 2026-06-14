@@ -225,7 +225,7 @@ class _Avatar extends StatelessWidget {
       child: avatarUrl == null || avatarUrl!.trim().isEmpty
           ? _AvatarFallback(initials: initials)
           : AppPhotoImage(
-              imageUrl: avatarUrl!,
+              localPath: avatarUrl!,
               fit: BoxFit.cover,
               errorBuilder: (_) => _AvatarFallback(initials: initials),
             ),

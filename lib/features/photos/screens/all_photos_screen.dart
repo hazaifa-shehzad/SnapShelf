@@ -94,8 +94,11 @@ class _AllPhotosScreenState extends State<AllPhotosScreen> {
 
     final photoModel = context.read<PhotoProvider>().getPhotoById(photo.id);
     if (photoModel != null) {
-      context.read<PhotoProvider>().deletePhoto(photo.id);
-      context.read<AlbumProvider>().decrementPhotoCount(photoModel.albumId);
+      await context.read<PhotoProvider>().deletePhoto(photo.id);
+      if (!mounted) return;
+      await context.read<AlbumProvider>().decrementPhotoCount(
+        photoModel.albumId,
+      );
     }
 
     _showSnackBar('${photo.id} deleted successfully');
@@ -108,9 +111,9 @@ class _AllPhotosScreenState extends State<AllPhotosScreen> {
     final album = albumProvider.getAlbumById(photo.albumId);
     return PhotoImageData(
       id: photo.id,
-      imageUrl: photo.imageUrl,
+      localPath: photo.localPath,
       albumName: album?.title,
-      createdAt: photo.uploadedAt,
+      createdAt: photo.createdAt,
     );
   }
 

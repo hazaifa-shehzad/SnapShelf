@@ -211,12 +211,25 @@ class _ProfileSettingScreenState extends State<ProfileSettingScreen> {
   Future<void> _saveProfile() async {
     if (!_formKey.currentState!.validate()) return;
     final email = _emailController.text.trim();
-    await context.read<AuthProvider>().updateEmail(email);
-    widget.onEmailSaved?.call(email);
+    final authProvider = context.read<AuthProvider>();
+    final didUpdate = await authProvider.updateEmail(email);
     if (!mounted) return;
 
+    if (!didUpdate) {
+      ScaffoldMessenger.of(context).showSnackBar(
+        SnackBar(
+          content: Text(authProvider.errorMessage ?? 'Profile update failed.'),
+        ),
+      );
+      return;
+    }
+
+    widget.onEmailSaved?.call(email);
+
     ScaffoldMessenger.of(context).showSnackBar(
-      const SnackBar(content: Text('Profile updated successfully.')),
+      const SnackBar(
+        content: Text('Profile updated. Check your new email to verify it.'),
+      ),
     );
   }
 }
@@ -280,7 +293,7 @@ class _ProfileAvatar extends StatelessWidget {
               child: avatarUrl == null || avatarUrl!.trim().isEmpty
                   ? _AvatarFallback(initials: initials)
                   : AppPhotoImage(
-                      imageUrl: avatarUrl!,
+                      localPath: avatarUrl!,
                       width: double.infinity,
                       height: double.infinity,
                       fit: BoxFit.cover,

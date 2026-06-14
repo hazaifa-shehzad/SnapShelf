@@ -116,15 +116,17 @@ class _AlbumDetailScreenState extends State<AlbumDetailScreen> {
     );
   }
 
-  void _deletePhoto(AlbumPhoto photo) {
+  Future<void> _deletePhoto(AlbumPhoto photo) async {
+    final messenger = ScaffoldMessenger.of(context);
     if (photo.id == null || widget.albumId == null) {
       setState(() => _localPhotos.remove(photo));
     } else {
-      context.read<PhotoProvider>().deletePhoto(photo.id!);
-      context.read<AlbumProvider>().decrementPhotoCount(widget.albumId!);
+      await context.read<PhotoProvider>().deletePhoto(photo.id!);
+      if (!mounted) return;
+      await context.read<AlbumProvider>().decrementPhotoCount(widget.albumId!);
     }
 
-    ScaffoldMessenger.of(context).showSnackBar(
+    messenger.showSnackBar(
       SnackBar(
         content: Text('${photo.fileName} removed from ${widget.albumTitle}'),
         behavior: SnackBarBehavior.floating,
@@ -137,17 +139,17 @@ class _AlbumDetailScreenState extends State<AlbumDetailScreen> {
     return AlbumPhoto(
       id: photo.id,
       fileName: photo.title,
-      imageUrl: photo.imageUrl,
+      localPath: photo.localPath,
     );
   }
 }
 
 class AlbumPhoto {
-  const AlbumPhoto({this.id, required this.fileName, required this.imageUrl});
+  const AlbumPhoto({this.id, required this.fileName, required this.localPath});
 
   final String? id;
   final String fileName;
-  final String imageUrl;
+  final String localPath;
 }
 
 class _DetailTopBar extends StatelessWidget {
@@ -214,7 +216,7 @@ class _AlbumPhotoCard extends StatelessWidget {
           borderRadius: BorderRadius.circular(14),
           boxShadow: [
             BoxShadow(
-              color: Colors.black.withOpacity(0.035),
+              color: Colors.black.withValues(alpha: 0.035),
               blurRadius: 16,
               offset: const Offset(0, 8),
             ),
@@ -285,13 +287,8 @@ class _AlbumPhotoCard extends StatelessWidget {
                     fit: StackFit.expand,
                     children: [
                       AppPhotoImage(
-                        imageUrl: photo.imageUrl,
+                        localPath: photo.localPath,
                         fit: BoxFit.cover,
-                        loadingBuilder: (_) {
-                          return _PhotoLoadingPlaceholder(
-                            accentColor: accentColor,
-                          );
-                        },
                         errorBuilder: (_) {
                           return _PhotoErrorPlaceholder(
                             accentColor: accentColor,
@@ -306,7 +303,7 @@ class _AlbumPhotoCard extends StatelessWidget {
                               end: Alignment.bottomCenter,
                               colors: [
                                 Colors.transparent,
-                                Colors.black.withOpacity(0.04),
+                                Colors.black.withValues(alpha: 0.04),
                               ],
                             ),
                           ),
@@ -326,25 +323,6 @@ class _AlbumPhotoCard extends StatelessWidget {
 
 enum _PhotoAction { view, delete }
 
-class _PhotoLoadingPlaceholder extends StatelessWidget {
-  const _PhotoLoadingPlaceholder({required this.accentColor});
-
-  final Color accentColor;
-
-  @override
-  Widget build(BuildContext context) {
-    return Container(
-      color: accentColor.withOpacity(0.08),
-      alignment: Alignment.center,
-      child: SizedBox(
-        height: 22,
-        width: 22,
-        child: CircularProgressIndicator(strokeWidth: 2, color: accentColor),
-      ),
-    );
-  }
-}
-
 class _PhotoErrorPlaceholder extends StatelessWidget {
   const _PhotoErrorPlaceholder({required this.accentColor});
 
@@ -353,7 +331,7 @@ class _PhotoErrorPlaceholder extends StatelessWidget {
   @override
   Widget build(BuildContext context) {
     return Container(
-      color: accentColor.withOpacity(0.09),
+      color: accentColor.withValues(alpha: 0.09),
       alignment: Alignment.center,
       child: Icon(
         Icons.image_not_supported_outlined,
@@ -426,7 +404,7 @@ class _PhotoPreviewScreen extends StatelessWidget {
           minScale: 0.8,
           maxScale: 4,
           child: AppPhotoImage(
-            imageUrl: photo.imageUrl,
+            localPath: photo.localPath,
             fit: BoxFit.contain,
             errorBuilder: (_) => const Icon(
               Icons.broken_image_outlined,

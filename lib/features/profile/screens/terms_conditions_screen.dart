@@ -32,12 +32,18 @@ class TermsConditionsScreen extends StatelessWidget {
               _SectionTitle('Introduction'),
               SizedBox(height: 12),
               _Paragraph(
-                'Welcome to your private photo storage app. These terms explain how you may use the app, upload photos, create albums, manage your profile, and control your account. By using the app, you agree to use it responsibly and keep your login details secure.',
+                'Welcome to SnapShelf. These terms explain how you may use the app, save photos locally on your device, create albums, manage your profile, and control your account. By using the app, you agree to use it responsibly and keep your login details secure.',
               ),
               SizedBox(height: 12),
-              _Bullet('You are responsible for the photos, names, captions, and album information you upload.'),
-              _Bullet('Do not upload content that violates another person\'s rights, privacy, or local laws.'),
-              _Bullet('Keep your password private and notify support if you think your account has been accessed without permission.'),
+              _Bullet(
+                'You are responsible for the photos, names, captions, and album information you save.',
+              ),
+              _Bullet(
+                'Do not save content that violates another person\'s rights, privacy, or local laws.',
+              ),
+              _Bullet(
+                'Keep your password private and notify support if you think your account has been accessed without permission.',
+              ),
               SizedBox(height: 22),
               _SectionTitle('Account usage'),
               SizedBox(height: 12),
@@ -45,14 +51,20 @@ class TermsConditionsScreen extends StatelessWidget {
                 'The app is designed for personal photo organization and safe image viewing. You may create albums, browse all photos, open single photo views, update your profile, reset your password, and remove your account when needed.',
               ),
               SizedBox(height: 12),
-              _Bullet('The UI currently uses local or dummy data until a backend service is connected.'),
-              _Bullet('Uploaded photos should be your own or shared with permission.'),
-              _Bullet('Account deletion can remove your local app data. Backend deletion should be connected when Firebase or another API is added.'),
+              _Bullet(
+                'Firestore stores metadata for album tracking and photo lists, while image files remain on your device.',
+              ),
+              _Bullet(
+                'Saved photos should be your own or shared with permission.',
+              ),
+              _Bullet(
+                'Account deletion can remove related Firestore metadata. Local files may also be removed with app data on the device.',
+              ),
               SizedBox(height: 22),
               _SectionTitle('Service availability'),
               SizedBox(height: 12),
               _Paragraph(
-                'We aim to keep the app simple, stable, and secure. Some features may change as the project moves from frontend-only implementation to real authentication, cloud storage, and database integration.',
+                'We aim to keep the app simple, stable, and secure. Some features depend on Firebase Auth and Firestore availability. Image files stay in local app storage on your device.',
               ),
               SizedBox(height: 22),
               _SectionTitle('Changes to these terms'),

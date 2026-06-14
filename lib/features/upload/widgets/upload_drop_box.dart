@@ -6,8 +6,8 @@ class UploadDropBox extends StatelessWidget {
   const UploadDropBox({
     super.key,
     this.onTap,
-    this.title = 'Drop your files here or Click to upload',
-    this.subtitle = 'SVG, PNG or JPG (max. 800x400px)',
+    this.title = 'Select files from this device',
+    this.subtitle = 'PNG or JPG files will be saved locally',
   });
 
   final VoidCallback? onTap;
@@ -74,7 +74,10 @@ class UploadDropBox extends StatelessWidget {
                       decoration: BoxDecoration(
                         color: Colors.white,
                         borderRadius: BorderRadius.circular(5),
-                        border: Border.all(color: const Color(0xFF8A82EA), width: 2),
+                        border: Border.all(
+                          color: const Color(0xFF8A82EA),
+                          width: 2,
+                        ),
                         boxShadow: [
                           BoxShadow(
                             color: Colors.black.withOpacity(0.06),
@@ -100,7 +103,7 @@ class UploadDropBox extends StatelessWidget {
                           shape: BoxShape.circle,
                         ),
                         child: const Icon(
-                          Icons.cloud_upload_rounded,
+                          Icons.phone_android_rounded,
                           color: Colors.white,
                           size: 17,
                         ),
@@ -120,9 +123,9 @@ class UploadDropBox extends StatelessWidget {
                     height: 1.2,
                   ),
                   children: [
-                    TextSpan(text: 'Drop your files here or '),
+                    TextSpan(text: 'Choose local photos or '),
                     TextSpan(
-                      text: 'Click to upload',
+                      text: 'tap to browse',
                       style: TextStyle(color: _primary),
                     ),
                   ],
@@ -169,7 +172,12 @@ class _DashedBorderPainter extends CustomPainter {
       ..style = PaintingStyle.stroke;
 
     final RRect rRect = RRect.fromRectAndRadius(
-      Rect.fromLTWH(strokeWidth / 2, strokeWidth / 2, size.width - strokeWidth, size.height - strokeWidth),
+      Rect.fromLTWH(
+        strokeWidth / 2,
+        strokeWidth / 2,
+        size.width - strokeWidth,
+        size.height - strokeWidth,
+      ),
       Radius.circular(radius),
     );
     final Path path = Path()..addRRect(rRect);

@@ -6,7 +6,10 @@ import 'package:shared_preferences/shared_preferences.dart';
 import 'package:mad/core/routes/route_names.dart';
 import 'package:mad/features/auth/screens/login_screen.dart';
 import 'package:mad/features/home/screens/home_screen.dart';
+import 'package:mad/data/models/user_model.dart';
+import 'package:mad/providers/album_provider.dart';
 import 'package:mad/providers/auth_provider.dart';
+import 'package:mad/providers/photo_provider.dart';
 
 void main() {
   TestWidgetsFlutterBinding.ensureInitialized();
@@ -22,8 +25,25 @@ void main() {
     });
 
     await tester.pumpWidget(
-      ChangeNotifierProvider(
-        create: (_) => AuthProvider(),
+      MultiProvider(
+        providers: [
+          ChangeNotifierProvider(
+            create: (_) => AuthProvider.testUser(
+              UserModel(
+                id: 'test-user',
+                name: 'Test User',
+                email: 'user@example.com',
+                createdAt: DateTime(2026),
+              ),
+            ),
+          ),
+          ChangeNotifierProvider(
+            create: (_) => AlbumProvider(loadOnCreate: false),
+          ),
+          ChangeNotifierProvider(
+            create: (_) => PhotoProvider(loadOnCreate: false),
+          ),
+        ],
         child: MaterialApp(
           home: const HomeScreen(),
           routes: <String, WidgetBuilder>{

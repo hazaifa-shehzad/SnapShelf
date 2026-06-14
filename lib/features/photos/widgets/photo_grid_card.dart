@@ -77,7 +77,7 @@ class PhotoGridCard extends StatelessWidget {
                   tag: 'photo-${photo.id}',
                   child: ClipRRect(
                     borderRadius: BorderRadius.circular(9),
-                    child: _NetworkPhoto(imageUrl: photo.imageUrl),
+                    child: _LocalPhoto(localPath: photo.localPath),
                   ),
                 ),
               ),
@@ -89,29 +89,18 @@ class PhotoGridCard extends StatelessWidget {
   }
 }
 
-class _NetworkPhoto extends StatelessWidget {
-  final String imageUrl;
+class _LocalPhoto extends StatelessWidget {
+  final String localPath;
 
-  const _NetworkPhoto({required this.imageUrl});
+  const _LocalPhoto({required this.localPath});
 
   @override
   Widget build(BuildContext context) {
     return AppPhotoImage(
-      imageUrl: imageUrl,
+      localPath: localPath,
       width: double.infinity,
       height: double.infinity,
       fit: BoxFit.cover,
-      loadingBuilder: (_) {
-        return Container(
-          color: const Color(0xFFF2F4F7),
-          alignment: Alignment.center,
-          child: const SizedBox(
-            width: 18,
-            height: 18,
-            child: CircularProgressIndicator(strokeWidth: 2),
-          ),
-        );
-      },
       errorBuilder: (_) {
         return Container(
           color: const Color(0xFFF2F4F7),

@@ -3,6 +3,7 @@ import 'package:provider/provider.dart';
 
 import '../../../data/models/album_model.dart';
 import '../../../providers/album_provider.dart';
+import '../../../providers/auth_provider.dart';
 import '../widgets/album_folder_card.dart';
 import '../widgets/album_search_field.dart';
 import 'album_detail_screen.dart';
@@ -55,6 +56,7 @@ class _AllAlbumsScreenState extends State<AllAlbumsScreen> {
             const SizedBox(height: 8),
             _AlbumsTopBar(
               title: 'All Albums',
+              initials: context.watch<AuthProvider>().user?.initials ?? 'U',
               onBack: () => Navigator.maybePop(context),
             ),
             const SizedBox(height: 14),
@@ -126,9 +128,14 @@ class _AllAlbumsScreenState extends State<AllAlbumsScreen> {
 }
 
 class _AlbumsTopBar extends StatelessWidget {
-  const _AlbumsTopBar({required this.title, required this.onBack});
+  const _AlbumsTopBar({
+    required this.title,
+    required this.initials,
+    required this.onBack,
+  });
 
   final String title;
+  final String initials;
   final VoidCallback onBack;
 
   @override
@@ -176,9 +183,10 @@ class _AlbumsTopBar extends StatelessWidget {
                   ],
                 ),
                 alignment: Alignment.center,
-                child: const Text(
-                  'Z',
-                  style: TextStyle(
+                child: Text(
+                  initials,
+                  maxLines: 1,
+                  style: const TextStyle(
                     color: Colors.white,
                     fontSize: 18,
                     fontWeight: FontWeight.w800,

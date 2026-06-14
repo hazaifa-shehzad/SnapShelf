@@ -91,7 +91,7 @@ class HomeHeader extends StatelessWidget {
             child: avatarUrl == null || avatarUrl!.trim().isEmpty
                 ? _avatarFallback()
                 : AppPhotoImage(
-                    imageUrl: avatarUrl!,
+                    localPath: avatarUrl!,
                     fit: BoxFit.cover,
                     errorBuilder: (_) => _avatarFallback(),
                   ),

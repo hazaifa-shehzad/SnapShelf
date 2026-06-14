@@ -5,14 +5,14 @@ class ShareService {
 
   static Future<void> shareText(String text) async {
     if (text.trim().isEmpty) return;
-    await Share.share(text.trim());
+    await SharePlus.instance.share(ShareParams(text: text.trim()));
   }
 
-  static Future<void> sharePhotoUrl({
+  static Future<void> sharePhoto({
     required String title,
-    required String imageUrl,
+    required String localPath,
   }) async {
-    final message = '$title\n$imageUrl';
+    final message = '$title\n$localPath';
     await shareText(message);
   }
 }

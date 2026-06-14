@@ -178,7 +178,7 @@ class _ChooseAlbumScreenState extends State<ChooseAlbumScreen> {
     if (!mounted || createdName == null || createdName.trim().isEmpty) return;
 
     final albumProvider = context.read<AlbumProvider>();
-    final createdAlbum = albumProvider.addAlbum(createdName.trim());
+    final createdAlbum = await albumProvider.addAlbum(createdName.trim());
     setState(() => _selectedAlbumId = createdAlbum?.id);
   }
 }

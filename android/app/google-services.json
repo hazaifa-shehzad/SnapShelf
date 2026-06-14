@@ -1,0 +1,29 @@
+{
+  "project_info": {
+    "project_number": "878545620225",
+    "project_id": "snapshelf-1",
+    "storage_bucket": "snapshelf-1.firebasestorage.app"
+  },
+  "client": [
+    {
+      "client_info": {
+        "mobilesdk_app_id": "1:878545620225:android:b8cb4cb5638df36b051f00",
+        "android_client_info": {
+          "package_name": "com.example.mad"
+        }
+      },
+      "oauth_client": [],
+      "api_key": [
+        {
+          "current_key": "AIzaSyD4MAzjOkCpvM3dkRvwlC18s2V8tBtrucI"
+        }
+      ],
+      "services": {
+        "appinvite_service": {
+          "other_platform_oauth_client": []
+        }
+      }
+    }
+  ],
+  "configuration_version": "1"
+}

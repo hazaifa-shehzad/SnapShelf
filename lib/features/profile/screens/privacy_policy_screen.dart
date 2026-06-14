@@ -32,27 +32,39 @@ class PrivacyPolicyScreen extends StatelessWidget {
               _SectionTitle('Introduction'),
               SizedBox(height: 12),
               _Paragraph(
-                'Your privacy is important. This policy explains what information the photo storage app may use when you create an account, upload images, create albums, update profile settings, or delete your account.',
+                'Your privacy is important. This policy explains what information SnapShelf may use when you create an account, save images locally, create albums, update profile settings, or delete your account.',
               ),
               SizedBox(height: 12),
-              _Bullet('Profile information such as email address and avatar may be used to personalize your account.'),
-              _Bullet('Photo and album data is used to show your uploads, albums, and photo detail screens.'),
-              _Bullet('Password fields are handled through secure authentication when a backend is connected.'),
+              _Bullet(
+                'Profile information such as email address and avatar may be used to personalize your account.',
+              ),
+              _Bullet(
+                'Photo and album metadata is used to show your local photos, albums, and photo detail screens.',
+              ),
+              _Bullet(
+                'Password fields are handled through secure authentication when a backend is connected.',
+              ),
               SizedBox(height: 22),
               _SectionTitle('Information we collect'),
               SizedBox(height: 12),
               _Paragraph(
-                'In the frontend version, sample data can be stored locally in memory for demo purposes. After backend integration, the app may store authentication data, profile details, album names, photo metadata, and uploaded images in your selected cloud service.',
+                'Actual image files are stored in the app documents directory on your mobile device. Firestore stores authentication-related profile details, album names, photo metadata, local file paths, counts, and tracking fields for organization.',
               ),
               SizedBox(height: 12),
-              _Bullet('We only request data needed for account access and photo organization.'),
-              _Bullet('Uploaded photos should be visible only through your authenticated account once backend rules are connected.'),
-              _Bullet('Delete account actions should also remove related cloud records when backend deletion is implemented.'),
+              _Bullet(
+                'We only request data needed for account access and photo organization.',
+              ),
+              _Bullet(
+                'Images are stored locally on your device instead of being uploaded to a remote image storage service.',
+              ),
+              _Bullet(
+                'Delete account actions should remove related Firestore metadata when backend deletion is implemented.',
+              ),
               SizedBox(height: 22),
               _SectionTitle('How we protect data'),
               SizedBox(height: 12),
               _Paragraph(
-                'The final production app should use authenticated routes, secure storage rules, protected API calls, and validation on both frontend and backend. Do not store raw passwords inside local app state or database records.',
+                'The production app should use authenticated routes, Firestore security rules, protected API calls, and validation on both frontend and backend. Do not store raw passwords inside local app state or database records.',
               ),
               SizedBox(height: 22),
               _SectionTitle('Your control'),

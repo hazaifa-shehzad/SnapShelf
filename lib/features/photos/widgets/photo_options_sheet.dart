@@ -79,7 +79,7 @@ class PhotoOptionsSheet extends StatelessWidget {
                   ClipRRect(
                     borderRadius: BorderRadius.circular(8),
                     child: AppPhotoImage(
-                      imageUrl: photo.imageUrl,
+                      localPath: photo.localPath,
                       width: 44,
                       height: 44,
                       fit: BoxFit.cover,

@@ -1,10 +1,10 @@
 import 'package:flutter/material.dart';
+import 'package:provider/provider.dart';
+
+import '../../../providers/auth_provider.dart';
 
 class ChangePasswordScreen extends StatefulWidget {
-  const ChangePasswordScreen({
-    super.key,
-    this.onPasswordChanged,
-  });
+  const ChangePasswordScreen({super.key, this.onPasswordChanged});
 
   final ValueChanged<String>? onPasswordChanged;
 
@@ -16,7 +16,8 @@ class _ChangePasswordScreenState extends State<ChangePasswordScreen> {
   final GlobalKey<FormState> _formKey = GlobalKey<FormState>();
   final TextEditingController _oldPasswordController = TextEditingController();
   final TextEditingController _newPasswordController = TextEditingController();
-  final TextEditingController _confirmPasswordController = TextEditingController();
+  final TextEditingController _confirmPasswordController =
+      TextEditingController();
 
   bool _hideOldPassword = true;
   bool _hideNewPassword = true;
@@ -54,7 +55,10 @@ class _ChangePasswordScreenState extends State<ChangePasswordScreen> {
                   icon: const Icon(Icons.arrow_back_rounded, size: 21),
                   color: const Color(0xFF2F3037),
                   padding: EdgeInsets.zero,
-                  constraints: const BoxConstraints(minWidth: 34, minHeight: 34),
+                  constraints: const BoxConstraints(
+                    minWidth: 34,
+                    minHeight: 34,
+                  ),
                 ),
                 const SizedBox(height: 24),
                 const Text(
@@ -81,9 +85,12 @@ class _ChangePasswordScreenState extends State<ChangePasswordScreen> {
                   hintText: 'Enter Old Password',
                   controller: _oldPasswordController,
                   obscureText: _hideOldPassword,
-                  onToggleVisibility: () => setState(() => _hideOldPassword = !_hideOldPassword),
+                  onToggleVisibility: () =>
+                      setState(() => _hideOldPassword = !_hideOldPassword),
                   validator: (value) {
-                    if ((value ?? '').trim().isEmpty) return 'Old password is required';
+                    if ((value ?? '').trim().isEmpty) {
+                      return 'Old password is required';
+                    }
                     return null;
                   },
                 ),
@@ -93,7 +100,8 @@ class _ChangePasswordScreenState extends State<ChangePasswordScreen> {
                   hintText: 'Enter New Password',
                   controller: _newPasswordController,
                   obscureText: _hideNewPassword,
-                  onToggleVisibility: () => setState(() => _hideNewPassword = !_hideNewPassword),
+                  onToggleVisibility: () =>
+                      setState(() => _hideNewPassword = !_hideNewPassword),
                   validator: _newPasswordValidator,
                 ),
                 const SizedBox(height: 22),
@@ -102,10 +110,16 @@ class _ChangePasswordScreenState extends State<ChangePasswordScreen> {
                   hintText: 'Rewrite New Password',
                   controller: _confirmPasswordController,
                   obscureText: _hideConfirmPassword,
-                  onToggleVisibility: () => setState(() => _hideConfirmPassword = !_hideConfirmPassword),
+                  onToggleVisibility: () => setState(
+                    () => _hideConfirmPassword = !_hideConfirmPassword,
+                  ),
                   validator: (value) {
-                    if ((value ?? '').trim().isEmpty) return 'Confirm password is required';
-                    if (value != _newPasswordController.text) return 'Passwords do not match';
+                    if ((value ?? '').trim().isEmpty) {
+                      return 'Confirm password is required';
+                    }
+                    if (value != _newPasswordController.text) {
+                      return 'Passwords do not match';
+                    }
                     return null;
                   },
                 ),
@@ -117,7 +131,9 @@ class _ChangePasswordScreenState extends State<ChangePasswordScreen> {
                     onPressed: _isSubmitting ? null : _resetPassword,
                     style: ElevatedButton.styleFrom(
                       elevation: 0,
-                      disabledBackgroundColor: _primary.withOpacity(0.55),
+                      disabledBackgroundColor: _primary.withValues(
+                        alpha: 0.55,
+                      ),
                       backgroundColor: _primary,
                       foregroundColor: Colors.white,
                       shape: RoundedRectangleBorder(
@@ -128,7 +144,10 @@ class _ChangePasswordScreenState extends State<ChangePasswordScreen> {
                         ? const SizedBox(
                             width: 20,
                             height: 20,
-                            child: CircularProgressIndicator(strokeWidth: 2, color: Colors.white),
+                            child: CircularProgressIndicator(
+                              strokeWidth: 2,
+                              color: Colors.white,
+                            ),
                           )
                         : const Text(
                             'Reset',
@@ -148,7 +167,9 @@ class _ChangePasswordScreenState extends State<ChangePasswordScreen> {
     final password = value?.trim() ?? '';
     if (password.isEmpty) return 'New password is required';
     if (password.length < 6) return 'Password must be at least 6 characters';
-    if (password == _oldPasswordController.text.trim()) return 'New password must be different';
+    if (password == _oldPasswordController.text.trim()) {
+      return 'New password must be different';
+    }
     return null;
   }
 
@@ -156,9 +177,25 @@ class _ChangePasswordScreenState extends State<ChangePasswordScreen> {
     if (!_formKey.currentState!.validate()) return;
 
     setState(() => _isSubmitting = true);
-    await Future<void>.delayed(const Duration(milliseconds: 550));
+
+    final authProvider = context.read<AuthProvider>();
+    final didChangePassword = await authProvider.changePassword(
+      currentPassword: _oldPasswordController.text,
+      newPassword: _newPasswordController.text,
+      confirmPassword: _confirmPasswordController.text,
+    );
+
     if (!mounted) return;
     setState(() => _isSubmitting = false);
+
+    if (!didChangePassword) {
+      ScaffoldMessenger.of(context).showSnackBar(
+        SnackBar(
+          content: Text(authProvider.errorMessage ?? 'Password reset failed.'),
+        ),
+      );
+      return;
+    }
 
     widget.onPasswordChanged?.call(_newPasswordController.text.trim());
     ScaffoldMessenger.of(context).showSnackBar(
@@ -217,34 +254,52 @@ class _PasswordField extends StatelessWidget {
             ),
             filled: true,
             fillColor: Colors.white,
-            contentPadding: const EdgeInsets.symmetric(horizontal: 16, vertical: 16),
+            contentPadding: const EdgeInsets.symmetric(
+              horizontal: 16,
+              vertical: 16,
+            ),
             suffixIcon: IconButton(
               onPressed: onToggleVisibility,
               icon: Icon(
-                obscureText ? Icons.visibility_off_rounded : Icons.visibility_rounded,
+                obscureText
+                    ? Icons.visibility_off_rounded
+                    : Icons.visibility_rounded,
                 size: 18,
                 color: const Color(0xFFB0B5C2),
               ),
             ),
             border: OutlineInputBorder(
               borderRadius: BorderRadius.circular(9),
-              borderSide: const BorderSide(color: _ChangePasswordScreenState._fieldBorder),
+              borderSide: const BorderSide(
+                color: _ChangePasswordScreenState._fieldBorder,
+              ),
             ),
             enabledBorder: OutlineInputBorder(
               borderRadius: BorderRadius.circular(9),
-              borderSide: const BorderSide(color: _ChangePasswordScreenState._fieldBorder),
+              borderSide: const BorderSide(
+                color: _ChangePasswordScreenState._fieldBorder,
+              ),
             ),
             focusedBorder: OutlineInputBorder(
               borderRadius: BorderRadius.circular(9),
-              borderSide: const BorderSide(color: _ChangePasswordScreenState._primary, width: 1.2),
+              borderSide: const BorderSide(
+                color: _ChangePasswordScreenState._primary,
+                width: 1.2,
+              ),
             ),
             errorBorder: OutlineInputBorder(
               borderRadius: BorderRadius.circular(9),
-              borderSide: const BorderSide(color: Color(0xFFFF5252), width: 1.2),
+              borderSide: const BorderSide(
+                color: Color(0xFFFF5252),
+                width: 1.2,
+              ),
             ),
             focusedErrorBorder: OutlineInputBorder(
               borderRadius: BorderRadius.circular(9),
-              borderSide: const BorderSide(color: Color(0xFFFF5252), width: 1.2),
+              borderSide: const BorderSide(
+                color: Color(0xFFFF5252),
+                width: 1.2,
+              ),
             ),
           ),
         ),

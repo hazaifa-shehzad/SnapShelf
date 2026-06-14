@@ -1,24 +1,27 @@
-import 'dart:convert';
-
+import 'package:cloud_firestore/cloud_firestore.dart';
+import 'package:firebase_auth/firebase_auth.dart';
 import 'package:flutter/material.dart';
-import 'package:shared_preferences/shared_preferences.dart';
 
 import '../data/models/album_model.dart';
 
 class AlbumProvider extends ChangeNotifier {
-  static const String _storageKey = 'albums';
-
   final List<AlbumModel> _albums = <AlbumModel>[];
   String _searchQuery = '';
   String? _selectedAlbumId;
+  bool _isLoading = false;
+  String? _errorMessage;
 
-  AlbumProvider() {
-    _loadAlbums();
+  AlbumProvider({bool loadOnCreate = true}) {
+    if (loadOnCreate) {
+      refreshAlbums();
+    }
   }
 
   List<AlbumModel> get albums => List.unmodifiable(_albums);
   String get searchQuery => _searchQuery;
   String? get selectedAlbumId => _selectedAlbumId;
+  bool get isLoading => _isLoading;
+  String? get errorMessage => _errorMessage;
 
   List<AlbumModel> get filteredAlbums {
     if (_searchQuery.trim().isEmpty) return albums;
@@ -50,94 +53,147 @@ class AlbumProvider extends ChangeNotifier {
     return null;
   }
 
-  AlbumModel? addAlbum(String title) {
+  Future<void> refreshAlbums() async {
+    final userId = FirebaseAuth.instance.currentUser?.uid;
+    if (userId == null) {
+      _albums.clear();
+      notifyListeners();
+      return;
+    }
+
+    _isLoading = true;
+    _errorMessage = null;
+    notifyListeners();
+
+    try {
+      final snapshot = await FirebaseFirestore.instance
+          .collection('albums')
+          .where('userId', isEqualTo: userId)
+          .get();
+
+      _albums
+        ..clear()
+        ..addAll(
+          snapshot.docs.map((doc) {
+            final data = doc.data();
+            return AlbumModel.fromJson({...data, 'id': data['id'] ?? doc.id});
+          }),
+        )
+        ..sort((a, b) => b.createdAt.compareTo(a.createdAt));
+    } catch (e) {
+      _errorMessage = e.toString();
+    }
+
+    _isLoading = false;
+    notifyListeners();
+  }
+
+  Future<AlbumModel?> addAlbum(String title) async {
     final trimmedTitle = title.trim();
     if (trimmedTitle.isEmpty) return null;
 
+    final userId = FirebaseAuth.instance.currentUser?.uid ?? 'guest_user';
+    final docRef = FirebaseFirestore.instance.collection('albums').doc();
+    final now = DateTime.now();
     final album = AlbumModel(
-      id: DateTime.now().millisecondsSinceEpoch.toString(),
+      id: docRef.id,
+      userId: userId,
       title: trimmedTitle,
+      description: '',
+      coverLocalPath: '',
+      coverPhotoId: '',
+      color: 'purple',
       photoCount: 0,
-      createdAt: DateTime.now(),
+      createdAt: now,
+      updatedAt: now,
     );
+
+    await docRef.set({
+      ...album.toJson(),
+      'createdAt': FieldValue.serverTimestamp(),
+      'updatedAt': FieldValue.serverTimestamp(),
+    });
+
     _albums.insert(0, album);
     notifyListeners();
-    _saveAlbums();
     return album;
   }
 
-  void updateAlbum({required String id, required String title}) {
+  Future<void> updateAlbum({required String id, required String title}) async {
     final index = _albums.indexWhere((album) => album.id == id);
     if (index == -1) return;
 
-    _albums[index] = _albums[index].copyWith(title: title.trim());
+    final updatedAlbum = _albums[index].copyWith(
+      title: title.trim(),
+      updatedAt: DateTime.now(),
+    );
+
+    await FirebaseFirestore.instance.collection('albums').doc(id).update({
+      'title': updatedAlbum.title,
+      'updatedAt': FieldValue.serverTimestamp(),
+    });
+
+    _albums[index] = updatedAlbum;
     notifyListeners();
-    _saveAlbums();
   }
 
-  void deleteAlbum(String id) {
+  Future<void> deleteAlbum(String id) async {
+    await FirebaseFirestore.instance.collection('albums').doc(id).delete();
     _albums.removeWhere((album) => album.id == id);
     if (_selectedAlbumId == id) _selectedAlbumId = null;
     notifyListeners();
-    _saveAlbums();
   }
 
-  void incrementPhotoCount(String albumId, {String? coverImageUrl}) {
+  void applyUploadedPhoto({
+    required String albumId,
+    required String photoId,
+    required String localPath,
+  }) {
     final index = _albums.indexWhere((album) => album.id == albumId);
     if (index == -1) return;
 
     final currentAlbum = _albums[index];
     _albums[index] = currentAlbum.copyWith(
       photoCount: currentAlbum.photoCount + 1,
-      coverImageUrl: coverImageUrl ?? currentAlbum.coverImageUrl,
+      coverLocalPath: currentAlbum.coverLocalPath.isEmpty
+          ? localPath
+          : currentAlbum.coverLocalPath,
+      coverPhotoId: currentAlbum.coverPhotoId.isEmpty
+          ? photoId
+          : currentAlbum.coverPhotoId,
+      updatedAt: DateTime.now(),
     );
     notifyListeners();
-    _saveAlbums();
   }
 
-  void decrementPhotoCount(String albumId) {
+  void syncAlbum(AlbumModel album) {
+    final index = _albums.indexWhere((item) => item.id == album.id);
+    if (index == -1) {
+      _albums.insert(0, album);
+    } else {
+      _albums[index] = album;
+    }
+    notifyListeners();
+  }
+
+  Future<void> decrementPhotoCount(String albumId) async {
     final index = _albums.indexWhere((album) => album.id == albumId);
     if (index == -1) return;
 
     final currentAlbum = _albums[index];
+    final nextCount = currentAlbum.photoCount > 0
+        ? currentAlbum.photoCount - 1
+        : 0;
+
+    await FirebaseFirestore.instance.collection('albums').doc(albumId).update({
+      'photoCount': nextCount,
+      'updatedAt': FieldValue.serverTimestamp(),
+    });
+
     _albums[index] = currentAlbum.copyWith(
-      photoCount: currentAlbum.photoCount > 0 ? currentAlbum.photoCount - 1 : 0,
+      photoCount: nextCount,
+      updatedAt: DateTime.now(),
     );
     notifyListeners();
-    _saveAlbums();
-  }
-
-  Future<void> _loadAlbums() async {
-    final preferences = await SharedPreferences.getInstance();
-    final encodedAlbums = preferences.getString(_storageKey);
-    if (encodedAlbums == null || encodedAlbums.isEmpty || _albums.isNotEmpty) {
-      return;
-    }
-
-    final Object? decodedAlbums;
-    try {
-      decodedAlbums = jsonDecode(encodedAlbums);
-    } catch (_) {
-      return;
-    }
-
-    if (decodedAlbums is! List) return;
-
-    _albums
-      ..clear()
-      ..addAll(
-        decodedAlbums.whereType<Map>().map(
-          (json) => AlbumModel.fromJson(Map<String, dynamic>.from(json)),
-        ),
-      );
-    notifyListeners();
-  }
-
-  Future<void> _saveAlbums() async {
-    final preferences = await SharedPreferences.getInstance();
-    final encodedAlbums = jsonEncode(
-      _albums.map((album) => album.toJson()).toList(growable: false),
-    );
-    await preferences.setString(_storageKey, encodedAlbums);
   }
 }

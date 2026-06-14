@@ -5,12 +5,12 @@ import '../../../core/widgets/app_photo_image.dart';
 class RecentUploadCard extends StatelessWidget {
   const RecentUploadCard({
     super.key,
-    required this.imageUrl,
+    required this.localPath,
     this.width = 96,
     this.height = 90,
   });
 
-  final String imageUrl;
+  final String localPath;
   final double width;
   final double height;
 
@@ -26,9 +26,8 @@ class RecentUploadCard extends StatelessWidget {
       ),
       clipBehavior: Clip.antiAlias,
       child: AppPhotoImage(
-        imageUrl: imageUrl,
+        localPath: localPath,
         fit: BoxFit.cover,
-        loadingBuilder: (_) => _placeholder(),
         errorBuilder: (_) => _placeholder(),
       ),
     );

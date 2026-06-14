@@ -125,7 +125,7 @@ class _HomeScreenState extends State<HomeScreen> {
                         itemCount: recentPhotos.length,
                         itemBuilder: (context, index) {
                           return RecentUploadCard(
-                            imageUrl: recentPhotos[index].imageUrl,
+                            localPath: recentPhotos[index].localPath,
                           );
                         },
                       ),
@@ -184,7 +184,7 @@ class _HomeScreenState extends State<HomeScreen> {
     );
 
     if (!mounted || createdName == null || createdName.trim().isEmpty) return;
-    context.read<AlbumProvider>().addAlbum(createdName);
+    await context.read<AlbumProvider>().addAlbum(createdName);
   }
 
   void _openAlbum(BuildContext context, AlbumModel album, Color accentColor) {

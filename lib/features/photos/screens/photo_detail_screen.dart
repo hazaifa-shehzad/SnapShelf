@@ -1,6 +1,8 @@
 import 'package:flutter/material.dart';
+import 'package:provider/provider.dart';
 
 import '../../../core/widgets/app_photo_image.dart';
+import '../../../providers/auth_provider.dart';
 import '../widgets/photo_image_data.dart';
 
 class PhotoDetailScreen extends StatefulWidget {
@@ -48,6 +50,7 @@ class _PhotoDetailScreenState extends State<PhotoDetailScreen> {
   @override
   Widget build(BuildContext context) {
     final currentPhoto = _currentPhoto;
+    final initials = context.watch<AuthProvider>().user?.initials ?? 'U';
 
     return Scaffold(
       backgroundColor: const Color(0xFFF9FAFB),
@@ -106,19 +109,10 @@ class _PhotoDetailScreenState extends State<PhotoDetailScreen> {
                                 return Hero(
                                   tag: 'photo-${photo.id}',
                                   child: AppPhotoImage(
-                                    imageUrl: photo.imageUrl,
+                                    localPath: photo.localPath,
                                     width: double.infinity,
                                     height: double.infinity,
                                     fit: BoxFit.cover,
-                                    loadingBuilder: (_) {
-                                      return Container(
-                                        color: const Color(0xFFF2F4F7),
-                                        alignment: Alignment.center,
-                                        child: const CircularProgressIndicator(
-                                          strokeWidth: 2,
-                                        ),
-                                      );
-                                    },
                                     errorBuilder: (_) {
                                       return Container(
                                         color: const Color(0xFFF2F4F7),
@@ -166,9 +160,10 @@ class _PhotoDetailScreenState extends State<PhotoDetailScreen> {
                               ],
                             ),
                             alignment: Alignment.center,
-                            child: const Text(
-                              'Z',
-                              style: TextStyle(
+                            child: Text(
+                              initials,
+                              maxLines: 1,
+                              style: const TextStyle(
                                 color: Colors.white,
                                 fontSize: 22,
                                 fontWeight: FontWeight.w900,

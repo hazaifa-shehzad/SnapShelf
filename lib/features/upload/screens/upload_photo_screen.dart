@@ -1,15 +1,13 @@
 import 'dart:async';
-import 'dart:io';
 
 import 'package:flutter/material.dart';
 import 'package:image_picker/image_picker.dart';
-import 'package:path_provider/path_provider.dart';
 import 'package:provider/provider.dart';
 
-import '../../../data/models/photo_model.dart';
 import '../../../data/services/image_picker_service.dart';
 import '../../../providers/album_provider.dart';
 import '../../../providers/photo_provider.dart';
+import '../../../providers/upload_provider.dart';
 import '../widgets/upload_drop_box.dart';
 import '../widgets/upload_progress_tile.dart';
 import 'choose_album_screen.dart';
@@ -76,7 +74,7 @@ class _UploadPhotoScreenState extends State<UploadPhotoScreen> {
               const SizedBox(height: 16),
               const Center(
                 child: Text(
-                  'Select images from your device to store them\nsecurely in the cloud',
+                  'Select images from your device to store them\nlocally on this phone',
                   textAlign: TextAlign.center,
                   style: TextStyle(
                     color: _textMuted,
@@ -158,6 +156,8 @@ class _UploadPhotoScreenState extends State<UploadPhotoScreen> {
       final List<_UploadItem> uploads = await _buildUploadItems(selectedFiles);
       if (!mounted) return;
 
+      context.read<UploadProvider>().selectImages(selectedFiles);
+
       setState(() {
         _isPickingFiles = false;
         _uploads
@@ -197,7 +197,7 @@ class _UploadPhotoScreenState extends State<UploadPhotoScreen> {
         _UploadItem(
           id: '${DateTime.now().microsecondsSinceEpoch}-$i',
           fileName: file.name,
-          filePath: await _savePickedFile(file, i),
+          filePath: file.path,
           sizeMb: sizeMb,
           secondsRemaining: 18 + (i * 8),
           progress: 0,
@@ -240,11 +240,18 @@ class _UploadPhotoScreenState extends State<UploadPhotoScreen> {
 
   String _statusText(_UploadItem item) {
     final int percent = (item.progress * 100).round().clamp(0, 100).toInt();
-    if (item.progress >= 1) return '100% - Upload completed';
+    if (item.progress >= 1) return 'Ready to save locally';
     return '$percent% - ${item.secondsRemaining} sec remaining';
   }
 
   void _removeUpload(String id) {
+    final uploadProvider = context.read<UploadProvider>();
+    for (final item in _uploads) {
+      if (item.id == id) {
+        uploadProvider.removeSelectedImage(item.filePath);
+        break;
+      }
+    }
     setState(() => _uploads.removeWhere((item) => item.id == id));
     if (_uploads.isEmpty) _timer?.cancel();
   }
@@ -258,28 +265,31 @@ class _UploadPhotoScreenState extends State<UploadPhotoScreen> {
 
     final albumProvider = context.read<AlbumProvider>();
     final photoProvider = context.read<PhotoProvider>();
+    final uploadProvider = context.read<UploadProvider>();
     final selectedAlbum = albumProvider.getAlbumById(selectedAlbumId);
     if (selectedAlbum == null) return;
 
-    final now = DateTime.now();
-    for (int i = 0; i < _uploads.length; i++) {
-      final item = _uploads[i];
-      final photo = PhotoModel(
-        id: 'photo_${now.microsecondsSinceEpoch}_$i',
-        albumId: selectedAlbumId,
-        title: item.fileName,
-        imageUrl: item.filePath,
-        size: '${item.sizeMb} MB',
-        uploadedAt: now.add(Duration(microseconds: i)),
-      );
+    uploadProvider.selectAlbum(selectedAlbumId);
+    final uploadedPhotos = await uploadProvider.uploadSelectedPhotos(
+      albumProvider: albumProvider,
+      photoProvider: photoProvider,
+    );
 
-      photoProvider.addPhoto(photo);
-      albumProvider.incrementPhotoCount(
-        selectedAlbumId,
-        coverImageUrl: photo.imageUrl,
+    if (!mounted) return;
+
+    if (uploadedPhotos.isEmpty) {
+      ScaffoldMessenger.of(context).showSnackBar(
+        SnackBar(
+          behavior: SnackBarBehavior.floating,
+          content: Text(
+            uploadProvider.errorMessage ?? 'Photos were not saved.',
+          ),
+        ),
       );
+      return;
     }
 
+    uploadProvider.clear();
     setState(() => _uploads.clear());
 
     ScaffoldMessenger.of(context).showSnackBar(
@@ -288,30 +298,6 @@ class _UploadPhotoScreenState extends State<UploadPhotoScreen> {
         content: Text('Photos added to ${selectedAlbum.title}'),
       ),
     );
-  }
-
-  Future<String> _savePickedFile(XFile file, int index) async {
-    final appDirectory = await getApplicationDocumentsDirectory();
-    final uploadsDirectory = Directory(
-      '${appDirectory.path}${Platform.pathSeparator}uploads',
-    );
-    if (!await uploadsDirectory.exists()) {
-      await uploadsDirectory.create(recursive: true);
-    }
-
-    final extension = _fileExtension(file.name);
-    final fileName =
-        '${DateTime.now().microsecondsSinceEpoch}_$index$extension';
-    final savedPath =
-        '${uploadsDirectory.path}${Platform.pathSeparator}$fileName';
-    await file.saveTo(savedPath);
-    return savedPath;
-  }
-
-  String _fileExtension(String fileName) {
-    final dotIndex = fileName.lastIndexOf('.');
-    if (dotIndex == -1 || dotIndex == fileName.length - 1) return '.jpg';
-    return fileName.substring(dotIndex);
   }
 }
 
