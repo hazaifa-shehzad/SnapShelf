@@ -179,7 +179,7 @@ class _HomeScreenState extends State<HomeScreen> {
   Future<void> _createAlbum() async {
     final String? createdName = await showDialog<String>(
       context: context,
-      barrierColor: const Color(0xFFAAA8DB).withOpacity(0.42),
+      barrierColor: const Color(0xFFAAA8DB).withValues(alpha: 0.42),
       builder: (_) => const CreateAlbumDialog(),
     );
 
@@ -191,7 +191,8 @@ class _HomeScreenState extends State<HomeScreen> {
     if (album.photoCount == 0) {
       Navigator.of(context).push(
         MaterialPageRoute(
-          builder: (_) => EmptyAlbumScreen(albumTitle: album.title),
+          builder: (_) =>
+              EmptyAlbumScreen(albumId: album.id, albumTitle: album.title),
         ),
       );
       return;

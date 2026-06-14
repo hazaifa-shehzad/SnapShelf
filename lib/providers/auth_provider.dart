@@ -10,7 +10,8 @@ class AuthProvider extends ChangeNotifier {
     bool loadOnCreate = true,
     fb_auth.FirebaseAuth? auth,
     FirebaseFirestore? firestore,
-  }) : _auth = auth,
+  }) : _isTestAuth = false,
+       _auth = auth,
        _firestore = firestore {
     if (loadOnCreate) {
       checkSession();
@@ -20,12 +21,14 @@ class AuthProvider extends ChangeNotifier {
   }
 
   AuthProvider.testUser(UserModel user)
-    : _auth = null,
+    : _isTestAuth = true,
+      _auth = null,
       _firestore = null,
       _isLoading = false,
       _isAuthenticated = true,
       _user = user;
 
+  final bool _isTestAuth;
   final fb_auth.FirebaseAuth? _auth;
   final FirebaseFirestore? _firestore;
 
@@ -106,12 +109,12 @@ class AuthProvider extends ChangeNotifier {
         return false;
       }
 
-      final credential = await _firebaseAuth.signInWithEmailAndPassword(
+      await _firebaseAuth.signInWithEmailAndPassword(
         email: trimmedEmail,
         password: password.trim(),
       );
 
-      final firebaseUser = credential.user;
+      final firebaseUser = _firebaseAuth.currentUser;
 
       if (firebaseUser == null) {
         _errorMessage = 'Login failed. Please try again.';
@@ -121,14 +124,11 @@ class AuthProvider extends ChangeNotifier {
 
       _user = await _getUserFromFirestore(firebaseUser.uid);
 
-      _user ??= UserModel(
-        id: firebaseUser.uid,
-        name: firebaseUser.displayName ?? _displayNameFromEmail(trimmedEmail),
-        email: trimmedEmail,
-        createdAt: DateTime.now(),
-      );
-
-      await _saveUserToFirestore(_user!);
+      if (_user == null) {
+        _errorMessage = 'User profile was not found. Please contact support.';
+        _setLoading(false);
+        return false;
+      }
 
       _isAuthenticated = true;
 
@@ -177,12 +177,12 @@ class AuthProvider extends ChangeNotifier {
         return false;
       }
 
-      final credential = await _firebaseAuth.createUserWithEmailAndPassword(
+      await _firebaseAuth.createUserWithEmailAndPassword(
         email: trimmedEmail,
         password: password.trim(),
       );
 
-      final firebaseUser = credential.user;
+      final firebaseUser = _firebaseAuth.currentUser;
 
       if (firebaseUser == null) {
         _errorMessage = 'Signup failed. Please try again.';
@@ -200,6 +200,8 @@ class AuthProvider extends ChangeNotifier {
       );
 
       await _saveUserToFirestore(_user!);
+
+      _user = await _getUserFromFirestore(firebaseUser.uid) ?? _user;
 
       _isAuthenticated = true;
       _rememberMe = true;
@@ -263,7 +265,7 @@ class AuthProvider extends ChangeNotifier {
     }
 
     try {
-      if (_auth != null && _firebaseAuth.currentUser != null) {
+      if (!_isTestAuth && _firebaseAuth.currentUser != null) {
         await _firebaseAuth.currentUser!.verifyBeforeUpdateEmail(trimmedEmail);
       }
 
@@ -369,7 +371,7 @@ class AuthProvider extends ChangeNotifier {
         return false;
       }
 
-      if (_auth == null) {
+      if (_isTestAuth) {
         _setLoading(false);
         return true;
       }
@@ -407,7 +409,7 @@ class AuthProvider extends ChangeNotifier {
   Future<void> logout() async {
     _setLoading(true);
 
-    if (_auth != null) {
+    if (!_isTestAuth) {
       await _firebaseAuth.signOut();
     }
     await LocalStorageService.clearSession();

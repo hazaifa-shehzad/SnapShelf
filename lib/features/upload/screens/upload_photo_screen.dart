@@ -13,7 +13,9 @@ import '../widgets/upload_progress_tile.dart';
 import 'choose_album_screen.dart';
 
 class UploadPhotoScreen extends StatefulWidget {
-  const UploadPhotoScreen({super.key});
+  const UploadPhotoScreen({super.key, this.initialAlbumId});
+
+  final String? initialAlbumId;
 
   @override
   State<UploadPhotoScreen> createState() => _UploadPhotoScreenState();
@@ -257,9 +259,11 @@ class _UploadPhotoScreenState extends State<UploadPhotoScreen> {
   }
 
   Future<void> _chooseAlbum() async {
-    final selectedAlbumId = await Navigator.of(context).push<String>(
-      MaterialPageRoute(builder: (_) => const ChooseAlbumScreen()),
-    );
+    final selectedAlbumId =
+        widget.initialAlbumId ??
+        await Navigator.of(context).push<String>(
+          MaterialPageRoute(builder: (_) => const ChooseAlbumScreen()),
+        );
 
     if (!mounted || selectedAlbumId == null) return;
 
@@ -298,6 +302,10 @@ class _UploadPhotoScreenState extends State<UploadPhotoScreen> {
         content: Text('Photos added to ${selectedAlbum.title}'),
       ),
     );
+
+    if (widget.initialAlbumId != null) {
+      Navigator.of(context).maybePop();
+    }
   }
 }
 

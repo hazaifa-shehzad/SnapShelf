@@ -108,7 +108,8 @@ class _AllAlbumsScreenState extends State<AllAlbumsScreen> {
       Navigator.push(
         context,
         MaterialPageRoute(
-          builder: (_) => EmptyAlbumScreen(albumTitle: album.title),
+          builder: (_) =>
+              EmptyAlbumScreen(albumId: album.id, albumTitle: album.title),
         ),
       );
       return;
@@ -176,7 +177,7 @@ class _AlbumsTopBar extends StatelessWidget {
                   shape: BoxShape.circle,
                   boxShadow: [
                     BoxShadow(
-                      color: Colors.black.withOpacity(0.16),
+                      color: Colors.black.withValues(alpha: 0.16),
                       blurRadius: 14,
                       offset: const Offset(0, 7),
                     ),

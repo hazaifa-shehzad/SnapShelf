@@ -1,6 +1,8 @@
 import 'package:flutter/material.dart';
+import 'package:provider/provider.dart';
 
 import '../../../core/routes/route_names.dart';
+import '../../../providers/auth_provider.dart';
 import '../widgets/auth_footer_link.dart';
 import '../widgets/auth_header.dart';
 import '../widgets/auth_social_button.dart';
@@ -54,14 +56,41 @@ class _SignupScreenState extends State<SignupScreen> {
   Future<void> _signup() async {
     if (!_formKey.currentState!.validate()) return;
 
+    final authProvider = context.read<AuthProvider>();
+
     setState(() => _isLoading = true);
-    await Future.delayed(const Duration(milliseconds: 750));
+    final success = await authProvider.signup(
+      name: _displayNameFromEmail(_emailController.text.trim()),
+      email: _emailController.text.trim(),
+      password: _passwordController.text,
+    );
 
     if (!mounted) return;
     setState(() => _isLoading = false);
 
+    if (!success) {
+      showAuthSnackBar(
+        context,
+        authProvider.errorMessage ?? 'Signup failed. Please try again.',
+      );
+      return;
+    }
+
     showAuthSnackBar(context, 'Account created successfully.');
-    Navigator.of(context).pushReplacementNamed(RouteNames.login);
+    Navigator.of(
+      context,
+    ).pushNamedAndRemoveUntil(RouteNames.home, (route) => false);
+  }
+
+  String _displayNameFromEmail(String email) {
+    final localPart = email.split('@').first.trim();
+    if (localPart.isEmpty) return 'User';
+
+    return localPart
+        .split(RegExp(r'[._\-\s]+'))
+        .where((part) => part.isNotEmpty)
+        .map((part) => '${part[0].toUpperCase()}${part.substring(1)}')
+        .join(' ');
   }
 
   @override
@@ -122,13 +151,19 @@ class _SignupScreenState extends State<SignupScreen> {
                     AuthSocialButton(
                       label: 'G',
                       textColor: const Color(0xFF4285F4),
-                      onTap: () => showAuthSnackBar(context, 'Google signup will connect later.'),
+                      onTap: () => showAuthSnackBar(
+                        context,
+                        'Google signup will connect later.',
+                      ),
                     ),
                     const SizedBox(width: 14),
                     AuthSocialButton(
                       label: 'Apple',
                       icon: Icons.apple_rounded,
-                      onTap: () => showAuthSnackBar(context, 'Apple signup will connect later.'),
+                      onTap: () => showAuthSnackBar(
+                        context,
+                        'Apple signup will connect later.',
+                      ),
                     ),
                   ],
                 ),
@@ -137,7 +172,9 @@ class _SignupScreenState extends State<SignupScreen> {
                   normalText: 'Already have an account? ',
                   actionText: 'Log In',
                   onTap: () {
-                    Navigator.of(context).pushReplacementNamed(RouteNames.login);
+                    Navigator.of(
+                      context,
+                    ).pushReplacementNamed(RouteNames.login);
                   },
                 ),
               ],

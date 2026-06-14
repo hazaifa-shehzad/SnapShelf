@@ -1,13 +1,17 @@
 import 'package:flutter/material.dart';
 
+import '../../upload/screens/upload_photo_screen.dart';
+
 class EmptyAlbumScreen extends StatelessWidget {
   const EmptyAlbumScreen({
     super.key,
+    this.albumId,
     this.albumTitle = 'New Album',
     this.onUploadTap,
     this.uploadRouteName,
   });
 
+  final String? albumId;
   final String albumTitle;
   final VoidCallback? onUploadTap;
   final String? uploadRouteName;
@@ -86,10 +90,9 @@ class EmptyAlbumScreen extends StatelessWidget {
       return;
     }
 
-    ScaffoldMessenger.of(context).showSnackBar(
-      const SnackBar(
-        content: Text('Connect this button with your UploadPhotoScreen.'),
-        behavior: SnackBarBehavior.floating,
+    Navigator.of(context).push(
+      MaterialPageRoute(
+        builder: (_) => UploadPhotoScreen(initialAlbumId: albumId),
       ),
     );
   }
@@ -152,7 +155,7 @@ class _EmptyAlbumIllustration extends StatelessWidget {
             child: _SoftBlob(
               height: 60,
               width: 130,
-              color: const Color(0xFFB8B9F2).withOpacity(0.35),
+              color: const Color(0xFFB8B9F2).withValues(alpha: 0.35),
               radius: 60,
             ),
           ),
@@ -169,7 +172,7 @@ class _EmptyAlbumIllustration extends StatelessWidget {
                   borderRadius: BorderRadius.circular(12),
                   boxShadow: [
                     BoxShadow(
-                      color: const Color(0xFF7B73DC).withOpacity(0.18),
+                      color: const Color(0xFF7B73DC).withValues(alpha: 0.18),
                       blurRadius: 16,
                       offset: const Offset(0, 8),
                     ),
@@ -220,9 +223,7 @@ class _EmptyAlbumIllustration extends StatelessWidget {
                         child: SizedBox(
                           height: 34,
                           width: 80,
-                          child: CustomPaint(
-                            painter: _MountainPainter(),
-                          ),
+                          child: CustomPaint(painter: _MountainPainter()),
                         ),
                       ),
                     ),
@@ -236,7 +237,9 @@ class _EmptyAlbumIllustration extends StatelessWidget {
             top: 20,
             child: Transform.rotate(
               angle: -0.38,
-              child: _Leaf(color: const Color(0xFF7B73DC).withOpacity(0.75)),
+              child: _Leaf(
+                color: const Color(0xFF7B73DC).withValues(alpha: 0.75),
+              ),
             ),
           ),
           Positioned(
@@ -252,7 +255,9 @@ class _EmptyAlbumIllustration extends StatelessWidget {
             top: 19,
             child: Transform.rotate(
               angle: 0.42,
-              child: _Leaf(color: const Color(0xFF95A0F2).withOpacity(0.9)),
+              child: _Leaf(
+                color: const Color(0xFF95A0F2).withValues(alpha: 0.9),
+              ),
             ),
           ),
           const Positioned(
@@ -282,7 +287,7 @@ class _InitialBadge extends StatelessWidget {
         border: Border.all(color: const Color(0xFF1D2C44), width: 5),
         boxShadow: [
           BoxShadow(
-            color: Colors.black.withOpacity(0.20),
+            color: Colors.black.withValues(alpha: 0.20),
             blurRadius: 14,
             offset: const Offset(0, 7),
           ),
@@ -353,10 +358,10 @@ class _MountainPainter extends CustomPainter {
   @override
   void paint(Canvas canvas, Size size) {
     final firstPaint = Paint()
-      ..color = Colors.white.withOpacity(0.62)
+      ..color = Colors.white.withValues(alpha: 0.62)
       ..style = PaintingStyle.fill;
     final secondPaint = Paint()
-      ..color = Colors.white.withOpacity(0.82)
+      ..color = Colors.white.withValues(alpha: 0.82)
       ..style = PaintingStyle.fill;
 
     final firstPath = Path()
