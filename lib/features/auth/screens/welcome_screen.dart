@@ -12,7 +12,7 @@ class WelcomeScreen extends StatelessWidget {
       backgroundColor: AuthColors.scaffold,
       body: SafeArea(
         child: Padding(
-          padding: const EdgeInsets.symmetric(horizontal: 28),
+          padding: const EdgeInsets.symmetric(horizontal: 29),
           child: Column(
             children: [
               const Spacer(flex: 2),
