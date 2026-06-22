@@ -12,7 +12,7 @@ class AppBackButton extends StatelessWidget {
   Widget build(BuildContext context) {
     return InkWell(
       onTap: onTap ?? () => Navigator.maybePop(context),
-      borderRadius: BorderRadius.circular(14),
+      borderRadius: BorderRadius.circular(15),
       child: Container(
         width: AppSizes.iconButtonSize,
         height: AppSizes.iconButtonSize,
